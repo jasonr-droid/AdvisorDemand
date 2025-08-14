@@ -240,7 +240,7 @@ class DatabaseManager:
         
         return self.execute_query(query, (county_fips,))
     
-    def get_data_coverage(self, county_fips: str) -> Dict[str, Any]:
+    def get_coverage_status(self, county_fips: str) -> Dict[str, Any]:
         """Get data coverage information for county"""
         coverage = {}
         
