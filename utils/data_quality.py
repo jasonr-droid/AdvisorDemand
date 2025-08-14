@@ -49,6 +49,19 @@ class DataQualityManager:
     
     def assess_data_quality(self, data: Dict[str, Any], data_source: str = '') -> Dict[str, Any]:
         """Assess overall data quality for a dataset"""
+        # Ensure data is a dictionary
+        if not isinstance(data, dict):
+            return {
+                'overall_score': 0,
+                'grade': 'F',
+                'completeness_score': 0,
+                'freshness_score': 0,
+                'consistency_score': 0,
+                'issues': ['Invalid data format'],
+                'recommendations': ['Check data structure'],
+                'data_source': data_source
+            }
+        
         quality_score = 100
         issues = []
         recommendations = []

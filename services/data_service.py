@@ -36,7 +36,7 @@ class DataService:
         # Set up logging
         self.logger = logging.getLogger(__name__)
     
-    def get_industry_data(self, county_fips: str, refresh: bool = False) -> pd.DataFrame:
+    def get_industry_data(self, county_fips: str, naics_level: int = 2, refresh: bool = False) -> pd.DataFrame:
         """Get combined industry data from CBP and QCEW"""
         try:
             # Check if we need to refresh data

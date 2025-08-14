@@ -41,8 +41,14 @@ class IndustryDashboard:
             st.warning("No industry data available for this county.")
             return
         
+        # Convert DataFrame to list of dicts for processing
+        if hasattr(industry_data, 'to_dict'):
+            industry_records = industry_data.to_dict('records')
+        else:
+            industry_records = industry_data if isinstance(industry_data, list) else []
+            
         # Apply data quality filtering
-        quality_filtered_data = self._apply_quality_filters(industry_data)
+        quality_filtered_data = self._apply_quality_filters(industry_records)
         
         # Summary metrics
         self._render_summary_metrics(quality_filtered_data)

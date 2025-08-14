@@ -1,0 +1,29 @@
+AttributeError: 'str' object has no attribute 'get'
+Traceback:
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 128, in exec_func_with_error_handling
+    result = func()
+             ^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 669, in code_to_exec
+    exec(code, module.__dict__)  # noqa: S102
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/app.py", line 133, in <module>
+    main()
+File "/home/runner/workspace/app.py", line 96, in main
+    render_industry_dashboard(data_service, county_fips)
+File "/home/runner/workspace/components/industry_dashboard.py", line 680, in render_industry_dashboard
+    dashboard.render(county_fips)
+File "/home/runner/workspace/components/industry_dashboard.py", line 45, in render
+    quality_filtered_data = self._apply_quality_filters(industry_data)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/components/industry_dashboard.py", line 436, in _apply_quality_filters
+    quality_info = self.quality_manager.assess_data_quality(suppressed_record)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/utils/data_quality.py", line 57, in assess_data_quality
+    completeness_score, completeness_issues = self._assess_completeness(data)
+                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/utils/data_quality.py", line 101, in _assess_completeness
+    missing_required = [f for f in required_fields if not data.get(f)]
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/utils/data_quality.py", line 101, in <listcomp>
+    missing_required = [f for f in required_fields if not data.get(f)]
+                                                          ^^^^^^^^
