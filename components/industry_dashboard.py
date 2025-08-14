@@ -67,11 +67,14 @@ class IndustryDashboard:
         # Apply data quality filtering
         quality_filtered_data = self._apply_quality_filters(industry_records)
         
-        # Add financial services classification
+        # Add financial services classification to all data
         if quality_filtered_data:
             df = pd.DataFrame(quality_filtered_data)
             df = self._add_financial_services_classification(df)
             quality_filtered_data = df.to_dict('records')
+        else:
+            # If no data, create empty list to avoid errors
+            quality_filtered_data = []
 
         # Summary metrics
         self._render_summary_metrics(quality_filtered_data)
@@ -206,18 +209,21 @@ class IndustryDashboard:
     def _render_financial_services_focus(self, industry_data: List[Dict[str, Any]]):
         """Render financial services focused analysis"""
         
-        # Convert to DataFrame and add financial services classification if needed
-        df = pd.DataFrame(industry_data)
-        if not df.empty and 'is_financial_services' not in df.columns:
-            df = self._add_financial_services_classification(df)
-            # Convert back to list of dicts
-            industry_data = df.to_dict('records')
-        
-        # Filter for financial services
+        # Filter for financial services (classification should already be applied)
         financial_data = [d for d in industry_data if d.get('is_financial_services')]
 
         if not financial_data:
-            st.info("No financial services data available for this county.")
+            # Debug: Let's check if we have any data at all and what NAICS codes are present
+            if industry_data:
+                naics_codes = [str(d.get('naics', '')) for d in industry_data[:5]]  # First 5 codes
+                st.info(f"No financial services data available for this county. Available NAICS codes include: {', '.join(naics_codes)}")
+                
+                # Check if any industries start with '52' (should be financial)
+                financial_candidates = [d for d in industry_data if str(d.get('naics', '')).startswith('52')]
+                if financial_candidates:
+                    st.warning(f"Found {len(financial_candidates)} industries with NAICS starting with '52' but they're not marked as financial services.")
+            else:
+                st.info("No industry data available for this county.")
             return
 
         st.subheader("Financial Services Deep Dive")
@@ -760,6 +766,9 @@ class IndustryDashboard:
 
     def _add_financial_services_classification(self, df: pd.DataFrame) -> pd.DataFrame:
         """Add financial services classification based on NAICS codes"""
+        if df.empty:
+            return df
+            
         # Financial services NAICS codes (52, 523, 5239, etc.)
         financial_naics_codes = [
             '52',    # Finance and Insurance
@@ -777,6 +786,15 @@ class IndustryDashboard:
 
         # Mark core financial advisor NAICS specifically
         df['is_core_advisor'] = df['naics'].astype(str).str.startswith('5239')
+
+        # Debug: Log classification results
+        financial_count = df['is_financial_services'].sum()
+        total_count = len(df)
+        logger.info(f"Financial services classification: {financial_count}/{total_count} industries marked as financial services")
+        
+        if financial_count > 0:
+            financial_naics = df[df['is_financial_services']]['naics'].tolist()
+            logger.info(f"Financial services NAICS codes found: {financial_naics}")
 
         return df
 
