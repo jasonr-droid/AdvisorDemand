@@ -64,13 +64,23 @@ class DatabaseManager:
             return True
             
         try:
+            # Validate data format
+            if not isinstance(data, list) or not all(isinstance(item, dict) for item in data):
+                logger.error(f"Invalid data format for bulk insert into {table}")
+                return False
+                
             df = pd.DataFrame(data)
+            
+            # Clean column names and data
+            df.columns = [col.strip() for col in df.columns]
+            
             with self.get_connection() as conn:
-                df.to_sql(table, conn, if_exists='append', index=False)
+                df.to_sql(table, conn, if_exists='append', index=False, method='multi')
                 return True
         except Exception as e:
-            logger.error(f"Error bulk inserting into {table}: {e}")
-            return False
+            self.logger.error(f"Error executing bulk insert: {e}")
+            # Try individual inserts as fallback
+            return self._fallback_insert(table, data)
     
     def get_industry_data(self, county_fips: str, naics_level: int = 2) -> List[Dict[str, Any]]:
         """Get industry data for county with specified NAICS level"""
@@ -287,6 +297,26 @@ class DatabaseManager:
             coverage['contracts_date'] = "2024"  # Default current year
         
         return coverage
+    
+    def _fallback_insert(self, table: str, data: List[Dict[str, Any]]) -> bool:
+        """Fallback individual insert method"""
+        try:
+            sample_record = data[0]
+            columns = list(sample_record.keys())
+            placeholders = ', '.join(['?' for _ in columns])
+            column_names = ', '.join(columns)
+            
+            insert_sql = f"INSERT OR REPLACE INTO {table} ({column_names}) VALUES ({placeholders})"
+            
+            with self.get_connection() as conn:
+                for record in data:
+                    values = [record.get(col) for col in columns]
+                    conn.execute(insert_sql, values)
+                conn.commit()
+                return True
+        except Exception as e:
+            self.logger.error(f"Error in fallback insert for {table}: {e}")
+            return False
     
     def log_data_refresh(self, source: str, county_fips: str, status: str, records_updated: int = 0, error_message: str = None):
         """Log data refresh attempt"""

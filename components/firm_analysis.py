@@ -27,7 +27,7 @@ class FirmAnalysis:
         
         # Get firm demographics data
         with st.spinner("Loading firm demographics data..."):
-            firm_data = self.data_service.get_firm_demographics(county_fips)
+            firm_data = self.data_service.get_firm_age_data(county_fips)
         
         if not any(firm_data.values()):
             st.warning("No firm demographics data available for this county.")
