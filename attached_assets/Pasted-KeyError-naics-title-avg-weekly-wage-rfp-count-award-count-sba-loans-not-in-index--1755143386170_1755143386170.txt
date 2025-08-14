@@ -1,0 +1,29 @@
+KeyError: "['naics_title', 'avg_weekly_wage', 'rfp_count', 'award_count', 'sba_loans'] not in index"
+Traceback:
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 128, in exec_func_with_error_handling
+    result = func()
+             ^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 669, in code_to_exec
+    exec(code, module.__dict__)  # noqa: S102
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/app.py", line 133, in <module>
+    main()
+File "/home/runner/workspace/app.py", line 96, in main
+    render_industry_dashboard(data_service, county_fips)
+File "/home/runner/workspace/components/industry_dashboard.py", line 686, in render_industry_dashboard
+    dashboard.render(county_fips)
+File "/home/runner/workspace/components/industry_dashboard.py", line 60, in render
+    self._render_industries_overview(quality_filtered_data)
+File "/home/runner/workspace/components/industry_dashboard.py", line 151, in _render_industries_overview
+    display_df = self._format_industries_table(df)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/components/industry_dashboard.py", line 466, in _format_industries_table
+    display_df = df[list(display_columns.keys())].copy()
+                 ~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/pandas/core/frame.py", line 4113, in __getitem__
+    indexer = self.columns._get_indexer_strict(key, "columns")[1]
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/pandas/core/indexes/base.py", line 6212, in _get_indexer_strict
+    self._raise_if_missing(keyarr, indexer, axis_name)
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/pandas/core/indexes/base.py", line 6264, in _raise_if_missing
+    raise KeyError(f"{not_found} not in index")

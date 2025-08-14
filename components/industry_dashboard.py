@@ -449,7 +449,8 @@ class IndustryDashboard:
     
     def _format_industries_table(self, df: pd.DataFrame) -> pd.DataFrame:
         """Format industries data for table display"""
-        display_columns = {
+        # Define all possible columns
+        all_display_columns = {
             'naics': 'NAICS',
             'naics_title': 'Industry',
             'establishments': 'Establishments', 
@@ -462,20 +463,41 @@ class IndustryDashboard:
             'quality_grade': 'Quality'
         }
         
-        # Create display DataFrame
-        display_df = df[list(display_columns.keys())].copy()
-        display_df = display_df.rename(columns=display_columns)
+        # Only use columns that actually exist in the DataFrame
+        available_columns = {k: v for k, v in all_display_columns.items() if k in df.columns}
+        
+        # Create display DataFrame with only available columns
+        if available_columns:
+            display_df = df[list(available_columns.keys())].copy()
+            display_df = display_df.rename(columns=available_columns)
+        else:
+            # Fallback to all columns if none match
+            display_df = df.copy()
         
         # Handle suppressed values
         for col in ['Establishments', 'Employment', 'Payroll']:
             suppressed_col = f"{col.lower()}_suppressed"
-            if suppressed_col in df.columns:
+            if suppressed_col in df.columns and col in display_df.columns:
                 display_df.loc[df[suppressed_col], col] = "—"
         
         # Format SBA loans column (it's a dict)
-        if 'sba_loans' in df.columns:
+        if 'sba_loans' in df.columns and 'SBA Loans' in display_df.columns:
             display_df['SBA Loans'] = df['sba_loans'].apply(
                 lambda x: x.get('count', 0) if isinstance(x, dict) else 0
+            )
+        
+        # Format numeric columns
+        if 'Establishments' in display_df.columns:
+            display_df['Establishments'] = display_df['Establishments'].apply(
+                lambda x: f"{x:,}" if pd.notna(x) and x != "—" else x
+            )
+        if 'Employment' in display_df.columns:
+            display_df['Employment'] = display_df['Employment'].apply(
+                lambda x: f"{x:,}" if pd.notna(x) and x != "—" else x
+            )
+        if 'Payroll' in display_df.columns:
+            display_df['Payroll'] = display_df['Payroll'].apply(
+                lambda x: f"${x:,.0f}" if pd.notna(x) and x != "—" else x
             )
         
         # Add badges for financial services
