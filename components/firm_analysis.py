@@ -145,8 +145,20 @@ class FirmAnalysis:
                 st.metric("Match Rate", f"{match_rate:.1f}%")
             
             with col2:
-                quality_badge = self.quality_manager.get_data_quality_badge(int(match_rate))
-                st.write(f"**Quality Grade:** {quality_badge['grade']}")
+                if self.quality_manager:
+                    quality_badge = self.quality_manager.get_data_quality_badge(int(match_rate))
+                    st.write(f"**Quality Grade:** {quality_badge['grade']}")
+                else:
+                    # Provide fallback quality assessment
+                    if match_rate >= 90:
+                        grade = "A"
+                    elif match_rate >= 75:
+                        grade = "B"
+                    elif match_rate >= 60:
+                        grade = "C"
+                    else:
+                        grade = "D"
+                    st.write(f"**Quality Grade:** {grade}")
                 st.write("**Source:** OpenCorporates incorporation data")
         
         # Age distribution visualization
@@ -776,5 +788,12 @@ class FirmAnalysis:
 
 def render_firm_analysis(data_service, county_fips: str):
     """Render the firm analysis dashboard for a given county"""
-    dashboard = FirmAnalysis(data_service, None)  # quality_manager is optional for now
+    # Initialize quality manager or use None (component handles fallback)
+    try:
+        from utils.data_quality import DataQualityManager
+        quality_manager = DataQualityManager()
+    except:
+        quality_manager = None
+    
+    dashboard = FirmAnalysis(data_service, quality_manager)
     dashboard.render(county_fips)

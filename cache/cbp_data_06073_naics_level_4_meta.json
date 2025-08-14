@@ -1,0 +1,9 @@
+{
+  "timestamp": "2025-08-14T18:06:40.046236",
+  "data_type": "cbp_data",
+  "county_fips": "06073",
+  "rows": 1637,
+  "kwargs": {
+    "naics_level": 4
+  }
+}
