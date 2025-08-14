@@ -1,0 +1,75 @@
+# Financial Advisor Demand Analyzer
+
+## Overview
+
+The Financial Advisor Demand Analyzer is a comprehensive web application that analyzes county-level market opportunities for financial advisory services. The system aggregates data from multiple government sources to provide insights into industry size, demand signals, firm demographics, and market dynamics for financial advisors looking to establish or expand their practice in specific U.S. counties.
+
+The application provides both observed data (directly from government sources) and calculated metrics (derived from multiple data points) to help financial advisors make informed decisions about market entry and business development strategies.
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
+
+## System Architecture
+
+### Frontend Architecture
+- **Framework**: Streamlit-based web application with modular component architecture
+- **Component Structure**: Organized into reusable components for county selection, industry analysis, signals dashboard, firm age charts, and methodology documentation
+- **Data Visualization**: Plotly integration for interactive charts and graphs
+- **State Management**: Streamlit's session state for maintaining user selections and cached data
+
+### Backend Architecture
+- **Application Layer**: Python-based application with service-oriented architecture
+- **Data Services**: Separated data fetching (DataService) and calculation logic (CalculationService)
+- **Adapter Pattern**: Individual adapters for each government data source (CBP, QCEW, SBA, SAM.gov, etc.)
+- **Caching Strategy**: Resource caching using Streamlit's `@st.cache_resource` decorator for database connections and services
+
+### Data Storage Solutions
+- **Primary Database**: SQLite database managed through DatabaseManager class
+- **Schema Management**: SQL schema files for database initialization and structure
+- **Data Persistence**: Local file-based storage for cached government data
+- **Privacy Compliance**: Built-in small cell suppression (k<3) for privacy protection
+
+### Authentication and Authorization
+- **API Keys**: Environment variable-based configuration for optional government API keys
+- **Rate Limiting**: Built-in rate limiting for all external API calls
+- **Data Licensing**: Automatic license and source URL tracking for all imported data
+
+### Data Quality and Compliance
+- **Data Labeling**: Clear distinction between "Observed" (direct government data) and "Estimated/Proxy" (calculated) metrics
+- **Data Suppression**: Automatic suppression of small cell counts for privacy compliance
+- **Source Attribution**: Every data point includes source URL, retrieval timestamp, and license information
+- **Quality Assessment**: DataQualityManager for assessing and reporting data completeness and reliability
+
+## External Dependencies
+
+### Government Data Sources
+- **Census Bureau County Business Patterns (CBP)**: Establishment counts, employment, and payroll by county and NAICS code
+- **Bureau of Labor Statistics QCEW**: Quarterly employment and wage data by county and industry
+- **Small Business Administration (SBA)**: Loan programs data (7a/504) for capital access analysis
+- **SAM.gov**: Federal contracting opportunities and RFPs
+- **USAspending.gov**: Federal awards and spending data by location
+- **Bureau of Formation Statistics (BFS)**: Business formation and application data
+- **OpenCorporates**: Corporate registration and firm demographic data
+- **City Business License APIs**: Municipal business license data from major cities
+
+### Technical Dependencies
+- **Core Framework**: Streamlit for web application framework
+- **Data Processing**: Pandas and NumPy for data manipulation and analysis
+- **Visualization**: Plotly Express and Plotly Graph Objects for interactive charts
+- **Database**: SQLite with better-sqlite3 compatibility for local data storage
+- **HTTP Requests**: Requests library for API calls with built-in retry logic
+- **Date Handling**: Python datetime and custom date utility classes
+
+### API Integrations
+- **Census API**: Optional API key for enhanced data access
+- **BLS API**: Optional API key for QCEW data
+- **SAM.gov API**: Optional API key for federal opportunities
+- **OpenCorporates API**: Optional API key for enhanced firm data
+- **City Data Portals**: Socrata/CKAN APIs for municipal data sources
+
+### Data Processing Libraries
+- **NAICS Mapping**: Custom library for industry code classification and hierarchy
+- **FIPS Utilities**: Custom library for county and state code management
+- **Data Quality**: Custom utilities for privacy compliance and data validation
+- **Calculation Engine**: Custom service for derived metrics and scoring algorithms

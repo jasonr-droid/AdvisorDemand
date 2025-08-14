@@ -1,0 +1,436 @@
+import pandas as pd
+from datetime import datetime, timedelta
+from typing import Dict, List, Any, Optional
+import logging
+
+from db.database import DatabaseManager
+from adapters.cbp import CBPAdapter
+from adapters.qcew import QCEWAdapter
+from adapters.sba import SBAAdapter
+from adapters.sam import SAMAdapter
+from adapters.usaspending import USASpendingAdapter
+from adapters.licenses import LicensesAdapter
+from adapters.opencorporates import OpenCorporatesAdapter
+from adapters.bfs import BFSAdapter
+from lib.naics import NAICSMapper
+from lib.utils import DataUtils
+
+class DataService:
+    """Main data service for fetching and processing government data"""
+    
+    def __init__(self, db_manager: DatabaseManager):
+        self.db = db_manager
+        self.naics_mapper = NAICSMapper()
+        self.data_utils = DataUtils()
+        
+        # Initialize adapters
+        self.cbp_adapter = CBPAdapter()
+        self.qcew_adapter = QCEWAdapter()
+        self.sba_adapter = SBAAdapter()
+        self.sam_adapter = SAMAdapter()
+        self.usaspending_adapter = USASpendingAdapter()
+        self.licenses_adapter = LicensesAdapter()
+        self.opencorporates_adapter = OpenCorporatesAdapter()
+        self.bfs_adapter = BFSAdapter()
+        
+        # Set up logging
+        self.logger = logging.getLogger(__name__)
+    
+    def get_industry_data(self, county_fips: str, refresh: bool = False) -> pd.DataFrame:
+        """Get combined industry data from CBP and QCEW"""
+        try:
+            # Check if we need to refresh data
+            if refresh or self._needs_refresh('cbp', days=30):
+                self._fetch_and_store_cbp_data(county_fips)
+            
+            if refresh or self._needs_refresh('qcew', days=90):
+                self._fetch_and_store_qcew_data(county_fips)
+            
+            # Get CBP data
+            cbp_query = """
+                SELECT county_fips, naics, year, establishments, employment, annual_payroll,
+                       suppressed, source_url, retrieved_at, license
+                FROM industry_cbp 
+                WHERE county_fips = ?
+                ORDER BY year DESC, naics
+            """
+            cbp_data = self.db.execute_query(cbp_query, (county_fips,))
+            
+            # Get QCEW data
+            qcew_query = """
+                SELECT county_fips, naics, year, quarter, employment as qcew_employment, 
+                       avg_weekly_wage, source_url, retrieved_at, license
+                FROM industry_qcew 
+                WHERE county_fips = ?
+                ORDER BY year DESC, quarter DESC, naics
+            """
+            qcew_data = self.db.execute_query(qcew_query, (county_fips,))
+            
+            # Merge CBP and QCEW data
+            if not cbp_data.empty and not qcew_data.empty:
+                # Get latest QCEW data for each NAICS
+                latest_qcew = qcew_data.groupby('naics').first().reset_index()
+                
+                # Merge with CBP data
+                merged_data = cbp_data.merge(
+                    latest_qcew[['naics', 'qcew_employment', 'avg_weekly_wage']], 
+                    on='naics', 
+                    how='left'
+                )
+                
+                return merged_data
+            
+            elif not cbp_data.empty:
+                return cbp_data
+            
+            elif not qcew_data.empty:
+                return qcew_data
+            
+            return pd.DataFrame()
+            
+        except Exception as e:
+            self.logger.error(f"Error getting industry data for {county_fips}: {str(e)}")
+            return pd.DataFrame()
+    
+    def get_sba_data(self, county_fips: str, refresh: bool = False) -> pd.DataFrame:
+        """Get SBA loan data with calculated metrics"""
+        try:
+            if refresh or self._needs_refresh('sba', days=30):
+                self._fetch_and_store_sba_data(county_fips)
+            
+            query = """
+                SELECT county_fips, fy, program, amount, lender, naics, approval_date,
+                       source_url, retrieved_at, license
+                FROM sba_loans 
+                WHERE county_fips = ?
+                ORDER BY fy DESC, approval_date DESC
+            """
+            sba_data = self.db.execute_query(query, (county_fips,))
+            
+            if sba_data.empty:
+                return pd.DataFrame()
+            
+            # Calculate annual metrics
+            annual_metrics = sba_data.groupby('fy').agg({
+                'amount': ['count', 'sum', 'mean']
+            }).round(2)
+            
+            annual_metrics.columns = ['loan_count', 'total_amount', 'avg_amount']
+            annual_metrics = annual_metrics.reset_index()
+            
+            # Get establishment count for per-1k calculations
+            establishments = self._get_establishment_count(county_fips)
+            
+            if establishments > 0:
+                annual_metrics['loans_per_1k_firms'] = (annual_metrics['loan_count'] / establishments) * 1000
+                annual_metrics['amount_per_1k_firms'] = (annual_metrics['total_amount'] / establishments) * 1000
+            else:
+                annual_metrics['loans_per_1k_firms'] = 0
+                annual_metrics['amount_per_1k_firms'] = 0
+            
+            # Add year column for consistency
+            annual_metrics['year'] = annual_metrics['fy']
+            
+            return annual_metrics
+            
+        except Exception as e:
+            self.logger.error(f"Error getting SBA data for {county_fips}: {str(e)}")
+            return pd.DataFrame()
+    
+    def get_rfp_data(self, county_fips: str, refresh: bool = False) -> pd.DataFrame:
+        """Get federal RFP opportunities data"""
+        try:
+            if refresh or self._needs_refresh('rfps', days=1):
+                self._fetch_and_store_rfp_data(county_fips)
+            
+            query = """
+                SELECT notice_id, title, naics, place_county_fips, posted_date, close_date,
+                       url, source_url, retrieved_at, license
+                FROM rfp_opps 
+                WHERE place_county_fips = ? OR place_county_fips IS NULL
+                ORDER BY posted_date DESC
+            """
+            rfp_data = self.db.execute_query(query, (county_fips,))
+            
+            return rfp_data
+            
+        except Exception as e:
+            self.logger.error(f"Error getting RFP data for {county_fips}: {str(e)}")
+            return pd.DataFrame()
+    
+    def get_awards_data(self, county_fips: str, refresh: bool = False) -> pd.DataFrame:
+        """Get federal awards data"""
+        try:
+            if refresh or self._needs_refresh('awards', days=1):
+                self._fetch_and_store_awards_data(county_fips)
+            
+            query = """
+                SELECT award_id, naics, recipient_county_fips, amount, action_date,
+                       agency, url, source_url, retrieved_at, license
+                FROM awards 
+                WHERE recipient_county_fips = ?
+                ORDER BY action_date DESC
+            """
+            awards_data = self.db.execute_query(query, (county_fips,))
+            
+            return awards_data
+            
+        except Exception as e:
+            self.logger.error(f"Error getting awards data for {county_fips}: {str(e)}")
+            return pd.DataFrame()
+    
+    def get_license_data(self, county_fips: str, refresh: bool = False) -> pd.DataFrame:
+        """Get business license data"""
+        try:
+            if refresh or self._needs_refresh('licenses', days=7):
+                self._fetch_and_store_license_data(county_fips)
+            
+            query = """
+                SELECT license_id, jurisdiction, county_fips, naics, issued_date, status,
+                       geocode, source_url, retrieved_at, license
+                FROM business_licenses 
+                WHERE county_fips = ?
+                ORDER BY issued_date DESC
+            """
+            license_data = self.db.execute_query(query, (county_fips,))
+            
+            return license_data
+            
+        except Exception as e:
+            self.logger.error(f"Error getting license data for {county_fips}: {str(e)}")
+            return pd.DataFrame()
+    
+    def get_firm_age_data(self, county_fips: str, refresh: bool = False) -> Dict[str, Any]:
+        """Get firm age distribution data"""
+        try:
+            if refresh or self._needs_refresh('firms', days=30):
+                self._fetch_and_store_firm_data(county_fips)
+            
+            query = """
+                SELECT company_id, jurisdiction, company_number, county_fips, 
+                       incorporation_date, status, source_url, retrieved_at, license
+                FROM firms 
+                WHERE county_fips = ?
+            """
+            firm_data = self.db.execute_query(query, (county_fips,))
+            
+            if firm_data.empty:
+                return {
+                    'age_0_1': 0, 'age_1_3': 0, 'age_3_5': 0, 'age_5_plus': 0,
+                    'total_firms': 0, 'match_rate': 0.0
+                }
+            
+            # Calculate age distribution
+            firm_records = firm_data.to_dict('records')
+            age_distribution = self.opencorporates_adapter.calculate_age_distribution(firm_records)
+            
+            return age_distribution
+            
+        except Exception as e:
+            self.logger.error(f"Error getting firm age data for {county_fips}: {str(e)}")
+            return {
+                'age_0_1': 0, 'age_1_3': 0, 'age_3_5': 0, 'age_5_plus': 0,
+                'total_firms': 0, 'match_rate': 0.0
+            }
+    
+    def get_formation_data(self, county_fips: str, refresh: bool = False) -> pd.DataFrame:
+        """Get business formation data"""
+        try:
+            if refresh or self._needs_refresh('formations', days=90):
+                self._fetch_and_store_formation_data(county_fips)
+            
+            query = """
+                SELECT county_fips, year, applications_total, high_propensity_apps,
+                       source_url, retrieved_at, license
+                FROM bfs_county 
+                WHERE county_fips = ?
+                ORDER BY year DESC
+            """
+            formation_data = self.db.execute_query(query, (county_fips,))
+            
+            return formation_data
+            
+        except Exception as e:
+            self.logger.error(f"Error getting formation data for {county_fips}: {str(e)}")
+            return pd.DataFrame()
+    
+    def get_data_freshness(self) -> Dict[str, str]:
+        """Get data freshness for all sources"""
+        return self.db.get_data_freshness()
+    
+    def get_coverage_status(self, county_fips: str) -> Dict[str, bool]:
+        """Get data coverage status for a county"""
+        return self.db.get_coverage_status(county_fips)
+    
+    # Private methods for data fetching
+    def _fetch_and_store_cbp_data(self, county_fips: str):
+        """Fetch and store CBP data"""
+        try:
+            # Get available years and fetch latest
+            available_years = self.cbp_adapter.get_available_years()
+            latest_year = available_years[0] if available_years else 2022
+            
+            cbp_data = self.cbp_adapter.fetch_county_data(county_fips, latest_year)
+            
+            if cbp_data:
+                self.db.execute_bulk_insert('industry_cbp', cbp_data)
+                self.db.update_data_freshness('cbp', len(cbp_data))
+                self.logger.info(f"Stored {len(cbp_data)} CBP records for {county_fips}")
+            
+        except Exception as e:
+            self.logger.error(f"Error fetching CBP data: {str(e)}")
+    
+    def _fetch_and_store_qcew_data(self, county_fips: str):
+        """Fetch and store QCEW data"""
+        try:
+            qcew_data = self.qcew_adapter.fetch_latest_quarter_data(county_fips)
+            
+            if qcew_data:
+                self.db.execute_bulk_insert('industry_qcew', qcew_data)
+                self.db.update_data_freshness('qcew', len(qcew_data))
+                self.logger.info(f"Stored {len(qcew_data)} QCEW records for {county_fips}")
+                
+        except Exception as e:
+            self.logger.error(f"Error fetching QCEW data: {str(e)}")
+    
+    def _fetch_and_store_sba_data(self, county_fips: str):
+        """Fetch and store SBA loan data"""
+        try:
+            # Fetch multiple recent years
+            current_year = datetime.now().year
+            years = [current_year, current_year - 1, current_year - 2]
+            
+            sba_data = self.sba_adapter.fetch_multiple_years(county_fips, years)
+            
+            if sba_data:
+                self.db.execute_bulk_insert('sba_loans', sba_data)
+                self.db.update_data_freshness('sba', len(sba_data))
+                self.logger.info(f"Stored {len(sba_data)} SBA loan records for {county_fips}")
+                
+        except Exception as e:
+            self.logger.error(f"Error fetching SBA data: {str(e)}")
+    
+    def _fetch_and_store_rfp_data(self, county_fips: str):
+        """Fetch and store RFP opportunities data"""
+        try:
+            rfp_data = self.sam_adapter.fetch_opportunities(county_fips)
+            
+            if rfp_data:
+                self.db.execute_bulk_insert('rfp_opps', rfp_data)
+                self.db.update_data_freshness('rfps', len(rfp_data))
+                self.logger.info(f"Stored {len(rfp_data)} RFP records for {county_fips}")
+                
+        except Exception as e:
+            self.logger.error(f"Error fetching RFP data: {str(e)}")
+    
+    def _fetch_and_store_awards_data(self, county_fips: str):
+        """Fetch and store federal awards data"""
+        try:
+            current_year = datetime.now().year
+            awards_data = self.usaspending_adapter.fetch_awards(county_fips, current_year)
+            
+            if awards_data:
+                self.db.execute_bulk_insert('awards', awards_data)
+                self.db.update_data_freshness('awards', len(awards_data))
+                self.logger.info(f"Stored {len(awards_data)} award records for {county_fips}")
+                
+        except Exception as e:
+            self.logger.error(f"Error fetching awards data: {str(e)}")
+    
+    def _fetch_and_store_license_data(self, county_fips: str):
+        """Fetch and store business license data"""
+        try:
+            license_data = self.licenses_adapter.fetch_licenses(county_fips)
+            
+            if license_data:
+                self.db.execute_bulk_insert('business_licenses', license_data)
+                self.db.update_data_freshness('licenses', len(license_data))
+                self.logger.info(f"Stored {len(license_data)} license records for {county_fips}")
+                
+        except Exception as e:
+            self.logger.error(f"Error fetching license data: {str(e)}")
+    
+    def _fetch_and_store_firm_data(self, county_fips: str):
+        """Fetch and store firm data"""
+        try:
+            firm_data = self.opencorporates_adapter.fetch_firms(county_fips)
+            
+            if firm_data:
+                self.db.execute_bulk_insert('firms', firm_data)
+                self.db.update_data_freshness('firms', len(firm_data))
+                self.logger.info(f"Stored {len(firm_data)} firm records for {county_fips}")
+                
+        except Exception as e:
+            self.logger.error(f"Error fetching firm data: {str(e)}")
+    
+    def _fetch_and_store_formation_data(self, county_fips: str):
+        """Fetch and store business formation data"""
+        try:
+            available_years = self.bfs_adapter.get_available_years()
+            formation_data = self.bfs_adapter.fetch_multiple_years(county_fips, available_years)
+            
+            if formation_data:
+                self.db.execute_bulk_insert('bfs_county', formation_data)
+                self.db.update_data_freshness('formations', len(formation_data))
+                self.logger.info(f"Stored {len(formation_data)} formation records for {county_fips}")
+                
+        except Exception as e:
+            self.logger.error(f"Error fetching formation data: {str(e)}")
+    
+    def _needs_refresh(self, source_name: str, days: int = 1) -> bool:
+        """Check if data source needs refresh"""
+        try:
+            freshness_data = self.db.get_data_freshness()
+            last_updated = freshness_data.get(source_name)
+            
+            if not last_updated:
+                return True
+            
+            last_update_date = datetime.fromisoformat(last_updated)
+            cutoff_date = datetime.now() - timedelta(days=days)
+            
+            return last_update_date < cutoff_date
+            
+        except Exception as e:
+            self.logger.error(f"Error checking refresh status for {source_name}: {str(e)}")
+            return True
+    
+    def _get_establishment_count(self, county_fips: str) -> int:
+        """Get total establishment count for per-1k calculations"""
+        try:
+            query = """
+                SELECT SUM(establishments) as total_establishments
+                FROM industry_cbp 
+                WHERE county_fips = ? AND naics LIKE '__'
+                ORDER BY year DESC
+                LIMIT 1
+            """
+            result = self.db.execute_query(query, (county_fips,))
+            
+            if not result.empty and result['total_establishments'].iloc[0]:
+                return int(result['total_establishments'].iloc[0])
+            
+            return 0
+            
+        except Exception as e:
+            self.logger.error(f"Error getting establishment count for {county_fips}: {str(e)}")
+            return 0
+    
+    def refresh_all_data(self, county_fips: str):
+        """Refresh all data sources for a county"""
+        self.logger.info(f"Starting full data refresh for {county_fips}")
+        
+        try:
+            self._fetch_and_store_cbp_data(county_fips)
+            self._fetch_and_store_qcew_data(county_fips)
+            self._fetch_and_store_sba_data(county_fips)
+            self._fetch_and_store_rfp_data(county_fips)
+            self._fetch_and_store_awards_data(county_fips)
+            self._fetch_and_store_license_data(county_fips)
+            self._fetch_and_store_firm_data(county_fips)
+            self._fetch_and_store_formation_data(county_fips)
+            
+            self.logger.info(f"Completed full data refresh for {county_fips}")
+            
+        except Exception as e:
+            self.logger.error(f"Error during full data refresh for {county_fips}: {str(e)}")
