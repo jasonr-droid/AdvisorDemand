@@ -422,6 +422,36 @@ class DataService:
         """Get data coverage status for a county"""
         return self.db.get_coverage_status(county_fips)
     
+    def get_establishment_totals(self, county_fips: str) -> Dict[str, int]:
+        """Get total establishment counts by data source for a county"""
+        totals = {}
+        
+        # CBP establishments (most recent year)
+        cbp_count = self._get_establishment_count(county_fips)
+        totals['cbp_establishments'] = cbp_count
+        
+        # Add other establishment counts as needed
+        try:
+            # QCEW establishments
+            qcew_query = """
+                SELECT SUM(establishments) AS total_establishments
+                FROM industry_qcew
+                WHERE county_fips = ?
+                  AND year = (SELECT MAX(year) FROM industry_qcew WHERE county_fips = ?)
+            """
+            qcew_result = self.db.execute_query(qcew_query, (county_fips, county_fips))
+            
+            if isinstance(qcew_result, list) and len(qcew_result) > 0:
+                totals['qcew_establishments'] = int(qcew_result[0].get('total_establishments', 0) or 0)
+            else:
+                totals['qcew_establishments'] = 0
+                
+        except Exception as e:
+            self.logger.error(f"Error getting QCEW establishment count: {str(e)}")
+            totals['qcew_establishments'] = 0
+        
+        return totals
+    
     # Private methods for data fetching
     def _fetch_and_store_cbp_data(self, county_fips: str):
         """Fetch and store CBP data"""
@@ -797,15 +827,22 @@ class DataService:
         """Get total establishment count for per-1k calculations"""
         try:
             query = """
-                SELECT SUM(establishments) as total_establishments
-                FROM industry_cbp 
-                WHERE county_fips = ? AND naics LIKE '__'
-                ORDER BY year DESC
-                LIMIT 1
+                SELECT SUM(establishments) AS total_establishments
+                FROM industry_cbp
+                WHERE county_fips = ?
+                  AND naics LIKE '__'
+                  AND year = (
+                    SELECT MAX(year) FROM industry_cbp
+                    WHERE county_fips = ? AND naics LIKE '__'
+                  )
             """
-            result = self.db.execute_query(query, (county_fips,))
+            result = self.db.execute_query(query, (county_fips, county_fips))
             
-            if not result.empty and result['total_establishments'].iloc[0]:
+            # Handle both DataFrame and list return types
+            if isinstance(result, list):
+                if len(result) > 0 and result[0].get('total_establishments'):
+                    return int(result[0]['total_establishments'])
+            elif hasattr(result, 'empty') and not result.empty and result['total_establishments'].iloc[0]:
                 return int(result['total_establishments'].iloc[0])
             
             return 0
