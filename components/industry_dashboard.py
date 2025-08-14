@@ -567,7 +567,16 @@ class IndustryDashboard:
 
     def _format_financial_services_table(self, df: pd.DataFrame) -> pd.DataFrame:
         """Format financial services data for detailed display"""
-        display_df = df[['naics', 'naics_title', 'establishments', 'employment', 'annual_payroll']].copy()
+        # Add naics_title if missing using NAICS mapper
+        if 'naics_title' not in df.columns:
+            from lib.naics_mapping import naics_mapper
+            df = df.copy()
+            df['naics_title'] = df['naics'].apply(lambda x: naics_mapper.get_naics_title(x))
+        
+        # Select available columns for display
+        available_columns = ['naics', 'naics_title', 'establishments', 'employment', 'annual_payroll']
+        display_columns = [col for col in available_columns if col in df.columns]
+        display_df = df[display_columns].copy()
 
         # Calculate additional metrics
         display_df['avg_pay'] = display_df['annual_payroll'] / display_df['employment']

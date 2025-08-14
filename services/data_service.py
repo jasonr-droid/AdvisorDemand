@@ -72,6 +72,11 @@ class DataService:
             # Convert to DataFrame
             df = pd.DataFrame(cbp_data)
             
+            # Add NAICS titles using mapper
+            if not df.empty and 'naics' in df.columns:
+                from lib.naics_mapping import naics_mapper
+                df['naics_title'] = df['naics'].apply(lambda x: naics_mapper.get_naics_title(x))
+            
             # Add quality metrics
             df['suppressed'] = False
             df['source_url'] = 'https://api.census.gov/data/2022/cbp'

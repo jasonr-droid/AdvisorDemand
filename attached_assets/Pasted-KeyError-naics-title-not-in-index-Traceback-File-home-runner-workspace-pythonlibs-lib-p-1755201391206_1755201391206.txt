@@ -1,0 +1,29 @@
+KeyError: "['naics_title'] not in index"
+Traceback:
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 128, in exec_func_with_error_handling
+    result = func()
+             ^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 669, in code_to_exec
+    exec(code, module.__dict__)  # noqa: S102
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/app.py", line 139, in <module>
+    main()
+File "/home/runner/workspace/app.py", line 102, in main
+    render_industry_dashboard(data_service, county_fips)
+File "/home/runner/workspace/components/industry_dashboard.py", line 811, in render_industry_dashboard
+    dashboard.render(county_fips)
+File "/home/runner/workspace/components/industry_dashboard.py", line 89, in render
+    self._render_financial_services_focus(quality_filtered_data)
+File "/home/runner/workspace/components/industry_dashboard.py", line 296, in _render_financial_services_focus
+    display_df = self._format_financial_services_table(fs_df)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/components/industry_dashboard.py", line 570, in _format_financial_services_table
+    display_df = df[['naics', 'naics_title', 'establishments', 'employment', 'annual_payroll']].copy()
+                 ~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/pandas/core/frame.py", line 4113, in __getitem__
+    indexer = self.columns._get_indexer_strict(key, "columns")[1]
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/pandas/core/indexes/base.py", line 6212, in _get_indexer_strict
+    self._raise_if_missing(keyarr, indexer, axis_name)
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/pandas/core/indexes/base.py", line 6264, in _raise_if_missing
+    raise KeyError(f"{not_found} not in index")
