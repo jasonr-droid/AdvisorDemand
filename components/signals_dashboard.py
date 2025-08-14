@@ -218,9 +218,16 @@ def render_license_signals(data_service, county_fips: str, data_utils):
     with st.spinner("Loading license data..."):
         license_data = data_service.get_license_data(county_fips)
     
-    if license_data.empty:
+    if (isinstance(license_data, list) and len(license_data) == 0) or (hasattr(license_data, 'empty') and license_data.empty):
         st.info("No business license data available for this county")
         return
+    
+    # Convert list to DataFrame if needed
+    if isinstance(license_data, list):
+        if len(license_data) == 0:
+            st.info("No business license data available for this county")
+            return
+        license_data = pd.DataFrame(license_data)
     
     # Summary metrics
     col1, col2, col3 = st.columns(3)
@@ -284,9 +291,16 @@ def render_formation_signals(data_service, county_fips: str, data_utils):
     with st.spinner("Loading formation data..."):
         formation_data = data_service.get_formation_data(county_fips)
     
-    if formation_data.empty:
+    if (isinstance(formation_data, list) and len(formation_data) == 0) or (hasattr(formation_data, 'empty') and formation_data.empty):
         st.info("No business formation data available for this county")
         return
+    
+    # Convert list to DataFrame if needed
+    if isinstance(formation_data, list):
+        if len(formation_data) == 0:
+            st.info("No business formation data available for this county")
+            return
+        formation_data = pd.DataFrame(formation_data)
     
     # Summary metrics
     col1, col2, col3 = st.columns(3)
