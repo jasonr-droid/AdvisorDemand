@@ -66,6 +66,12 @@ class IndustryDashboard:
 
         # Apply data quality filtering
         quality_filtered_data = self._apply_quality_filters(industry_records)
+        
+        # Add financial services classification
+        if quality_filtered_data:
+            df = pd.DataFrame(quality_filtered_data)
+            df = self._add_financial_services_classification(df)
+            quality_filtered_data = df.to_dict('records')
 
         # Summary metrics
         self._render_summary_metrics(quality_filtered_data)
@@ -199,6 +205,13 @@ class IndustryDashboard:
 
     def _render_financial_services_focus(self, industry_data: List[Dict[str, Any]]):
         """Render financial services focused analysis"""
+        
+        # Convert to DataFrame and add financial services classification if needed
+        df = pd.DataFrame(industry_data)
+        if not df.empty and 'is_financial_services' not in df.columns:
+            df = self._add_financial_services_classification(df)
+            # Convert back to list of dicts
+            industry_data = df.to_dict('records')
         
         # Filter for financial services
         financial_data = [d for d in industry_data if d.get('is_financial_services')]
