@@ -31,7 +31,7 @@ def render_rfp_signals(data_service, county_fips: str, data_utils):
     with st.spinner("Loading RFP data..."):
         # Get all signals data and filter for RFP data
         signals_data = data_service.get_demand_signals(county_fips)
-        rfp_signals = signals_data[signals_data['signal_type'] == 'rfp_count'] if not signals_data.empty else pd.DataFrame()
+        rfp_signals = signals_data[signals_data['signal_type'] == 'Federal RFP Opportunities'] if not signals_data.empty else pd.DataFrame()
     
     if rfp_signals.empty:
         st.info("No federal RFP opportunities found for this county in the past year")
@@ -41,18 +41,18 @@ def render_rfp_signals(data_service, county_fips: str, data_utils):
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        rfp_count = rfp_signals['value'].iloc[0] if not rfp_signals.empty else 0
+        rfp_count = rfp_signals['count'].iloc[0] if not rfp_signals.empty else 0
         st.metric(
             f"{data_utils.get_data_badge('Observed')} Total RFPs",
             data_utils.format_number(rfp_count)
         )
     
     with col2:
-        # Show year of data
-        data_year = rfp_signals['year'].iloc[0] if not rfp_signals.empty else 2024
+        # Show recent activity
+        recent_count = rfp_signals['recent_count'].iloc[0] if not rfp_signals.empty else 0
         st.metric(
-            "Data Year",
-            data_year
+            "Recent Activity",
+            data_utils.format_number(recent_count)
         )
     
     with col3:
@@ -67,10 +67,11 @@ def render_rfp_signals(data_service, county_fips: str, data_utils):
     if not rfp_signals.empty:
         st.subheader("RFP Signal Details")
         
-        description = rfp_signals['description'].iloc[0]
-        source_url = rfp_signals['source_url'].iloc[0]
+        # Show trend analysis
+        trend = rfp_signals['trend'].iloc[0] if 'trend' in rfp_signals.columns else 'stable'
+        trend_color = "🟢" if trend == 'increasing' else "🟡" if trend == 'stable' else "🔴"
         
-        st.info(f"📊 **Market Intelligence**: {description}")
+        st.info(f"📊 **Market Intelligence**: Federal RFP opportunities show {trend_color} **{trend}** trend")
         
         col1, col2 = st.columns(2)
         with col1:
@@ -82,10 +83,11 @@ def render_rfp_signals(data_service, county_fips: str, data_utils):
         with col2:
             st.markdown("**Data Source Information**")
             st.write(f"• Source: {rfp_signals['source'].iloc[0]}")
-            st.write(f"• Year: {rfp_signals['year'].iloc[0]}")
-            st.write(f"• Retrieved: {rfp_signals['retrieved_at'].iloc[0][:10]}")
+            st.write(f"• Trend: {trend_color} {trend.title()}")
+            if 'recent_count' in rfp_signals.columns:
+                st.write(f"• Recent Activity: {rfp_signals['recent_count'].iloc[0]} opportunities")
         
-        st.markdown(f"🔗 **Data Source**: [{source_url}]({source_url})")
+        st.markdown("🔗 **Data Source**: [SAM.gov](https://sam.gov)")
 
 def render_awards_signals(data_service, county_fips: str, data_utils):
     """Render federal awards signals"""
@@ -94,7 +96,7 @@ def render_awards_signals(data_service, county_fips: str, data_utils):
     with st.spinner("Loading awards data..."):
         # Get all signals data and filter for awards data
         signals_data = data_service.get_demand_signals(county_fips)
-        award_signals = signals_data[signals_data['signal_type'] == 'award_count'] if not signals_data.empty else pd.DataFrame()
+        award_signals = signals_data[signals_data['signal_type'] == 'Federal Awards'] if not signals_data.empty else pd.DataFrame()
     
     if award_signals.empty:
         st.info("No federal contract awards found for this county")
@@ -104,19 +106,25 @@ def render_awards_signals(data_service, county_fips: str, data_utils):
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        award_count = award_signals['value'].iloc[0] if not award_signals.empty else 0
+        award_count = award_signals['count'].iloc[0] if not award_signals.empty else 0
         st.metric(
             f"{data_utils.get_data_badge('Observed')} Total Awards",
             data_utils.format_number(award_count)
         )
     
     with col2:
-        # Show year of data
-        data_year = award_signals['year'].iloc[0] if not award_signals.empty else 2024
-        st.metric(
-            "Data Year",
-            data_year
-        )
+        # Show award value if available
+        award_value = award_signals['value'].iloc[0] if not award_signals.empty and 'value' in award_signals.columns else 0
+        if award_value > 0:
+            st.metric(
+                "Award Value",
+                f"${data_utils.format_number(award_value/1000000)}M"
+            )
+        else:
+            st.metric(
+                "Trend",
+                award_signals['trend'].iloc[0].title() if not award_signals.empty else "Stable"
+            )
     
     with col3:
         # Show data source  
@@ -130,10 +138,11 @@ def render_awards_signals(data_service, county_fips: str, data_utils):
     if not award_signals.empty:
         st.subheader("Awards Signal Details")
         
-        description = award_signals['description'].iloc[0]
-        source_url = award_signals['source_url'].iloc[0]
+        # Show trend analysis
+        trend = award_signals['trend'].iloc[0] if 'trend' in award_signals.columns else 'stable'
+        trend_color = "🟢" if trend == 'increasing' else "🟡" if trend == 'stable' else "🔴"
         
-        st.info(f"📊 **Market Intelligence**: {description}")
+        st.info(f"📊 **Market Intelligence**: Federal contract awards show {trend_color} **{trend}** trend")
         
         col1, col2 = st.columns(2)
         with col1:
@@ -145,10 +154,11 @@ def render_awards_signals(data_service, county_fips: str, data_utils):
         with col2:
             st.markdown("**Data Source Information**")
             st.write(f"• Source: {award_signals['source'].iloc[0]}")
-            st.write(f"• Year: {award_signals['year'].iloc[0]}")
-            st.write(f"• Retrieved: {award_signals['retrieved_at'].iloc[0][:10]}")
+            st.write(f"• Trend: {trend_color} {trend.title()}")
+            if 'value' in award_signals.columns and award_signals['value'].iloc[0] > 0:
+                st.write(f"• Total Value: ${award_signals['value'].iloc[0]/1000000:.1f}M")
         
-        st.markdown(f"🔗 **Data Source**: [{source_url}]({source_url})")
+        st.markdown("🔗 **Data Source**: [USAspending.gov](https://usaspending.gov)")
 
 def render_license_signals(data_service, county_fips: str, data_utils):
     """Render business license signals"""
@@ -228,49 +238,52 @@ def render_formation_signals(data_service, county_fips: str, data_utils):
     st.subheader("Capital Demand Activity (SBA Loans)")
     
     with st.spinner("Loading SBA loan data..."):
-        # Get all signals data and filter for SBA loan data
+        # Get all signals data and filter for SBA loan data  
         signals_data = data_service.get_demand_signals(county_fips)
-        sba_signals = signals_data[signals_data['signal_type'] == 'sba_loans'] if not signals_data.empty else pd.DataFrame()
+        sba_signals = signals_data[signals_data['signal_type'] == 'New Business Applications'] if not signals_data.empty else pd.DataFrame()
     
     if sba_signals.empty:
         st.info("No SBA loan data available for this county")
         return
     
-    # Summary metrics from cached SBA loan data
+    # Summary metrics from cached business formation data
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        sba_loan_count = sba_signals['value'].iloc[0] if not sba_signals.empty else 0
+        formation_count = sba_signals['count'].iloc[0] if not sba_signals.empty else 0
         st.metric(
-            f"{data_utils.get_data_badge('Observed')} SBA Loans",
-            data_utils.format_number(sba_loan_count)
+            f"{data_utils.get_data_badge('Observed')} New Applications",
+            data_utils.format_number(formation_count)
         )
     
     with col2:
-        # Show year of data
-        data_year = sba_signals['year'].iloc[0] if not sba_signals.empty else 2024
+        # Show recent activity
+        recent_count = sba_signals['recent_count'].iloc[0] if not sba_signals.empty and 'recent_count' in sba_signals.columns else 0
         st.metric(
-            "Data Year",
-            data_year
+            "Recent Activity",
+            data_utils.format_number(recent_count) if recent_count > 0 else "N/A"
         )
     
     with col3:
         # Show data source  
-        source = sba_signals['source'].iloc[0] if not sba_signals.empty else "SBA"
+        source = sba_signals['source'].iloc[0] if not sba_signals.empty else "Census BFS"
         st.metric(
             "Source",
             source
         )
     
-    # SBA loan information
+    # Business formation information
     if not sba_signals.empty:
-        description = sba_signals['description'].iloc[0]
-        st.info(f"💡 **Capital Demand Indicator**: {description}")
+        # Show trend analysis
+        trend = sba_signals['trend'].iloc[0] if 'trend' in sba_signals.columns else 'stable'
+        trend_color = "🟢" if trend == 'increasing' else "🟡" if trend == 'stable' else "🔴"
+        
+        st.info(f"💡 **Market Growth Indicator**: New business applications show {trend_color} **{trend}** trend")
         
         st.markdown("""
-        **SBA loans indicate businesses requiring capital access**, which creates demand for:
-        - Financial advisory services
-        - Business loan consulting  
-        - Cash flow management advice
-        - Growth planning services
+        **New business applications indicate entrepreneurial activity**, which creates demand for:
+        - Business planning and financial consulting
+        - Startup advisory services  
+        - Capital access and funding guidance
+        - Tax planning and compliance services
         """)
