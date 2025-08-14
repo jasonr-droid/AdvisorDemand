@@ -581,34 +581,49 @@ class DataService:
     def _fetch_fresh_demand_signals(self, county_fips: str) -> pd.DataFrame:
         """Fetch fresh demand signals from various sources"""
         try:
-            # Get RFP data
-            rfp_data = self.get_rfp_data_old(county_fips, refresh=True)
+            print(f"🔍 Fetching fresh demand signals for {county_fips}")
             
-            # Get awards data  
-            awards_data = self.get_awards_data_old(county_fips, refresh=True)
+            # Fetch RFP data directly from SAM adapter
+            rfp_data = self.sam_adapter.fetch_opportunities(county_fips)
+            rfp_df = pd.DataFrame(rfp_data) if rfp_data else pd.DataFrame()
             
-            # Get business formation data
-            bfs_data = self.get_formation_data(county_fips, refresh=True)
+            # Fetch awards data directly from USAspending adapter
+            current_year = datetime.now().year
+            awards_data = self.usaspending_adapter.fetch_awards(county_fips, current_year)
+            awards_df = pd.DataFrame(awards_data) if awards_data else pd.DataFrame()
+            
+            # Get business formation data (cached approach is fine for this)
+            bfs_data = self.get_business_formation_data(county_fips, refresh=True)
             
             # Combine into signals summary
             signals_summary = []
             
+            print(f"📊 Found {len(rfp_df)} RFPs, {len(awards_df)} awards, {len(bfs_data)} formations")
+            
             # RFP signals
-            if not rfp_data.empty:
-                total_rfps = len(rfp_data)
-                avg_value = rfp_data['estimated_value'].mean() if 'estimated_value' in rfp_data.columns else 0
+            if not rfp_df.empty:
+                total_rfps = len(rfp_df)
+                # Look for recent opportunities (last 90 days)
+                recent_rfps = 0
+                if 'posted_date' in rfp_df.columns:
+                    cutoff_date = datetime.now() - timedelta(days=90)
+                    recent_count = sum(1 for date_str in rfp_df['posted_date'] 
+                                     if date_str and pd.to_datetime(date_str, errors='coerce') > cutoff_date)
+                    recent_rfps = recent_count
+                
                 signals_summary.append({
                     'signal_type': 'Federal RFP Opportunities',
                     'count': total_rfps,
-                    'value': avg_value,
+                    'recent_count': recent_rfps,
+                    'value': 0,
                     'trend': 'stable',
                     'source': 'SAM.gov'
                 })
             
             # Awards signals
-            if not awards_data.empty:
-                total_awards = len(awards_data)
-                total_value = awards_data['amount'].sum() if 'amount' in awards_data.columns else 0
+            if not awards_df.empty:
+                total_awards = len(awards_df)
+                total_value = awards_df['amount'].sum() if 'amount' in awards_df.columns else 0
                 signals_summary.append({
                     'signal_type': 'Federal Awards',
                     'count': total_awards,
