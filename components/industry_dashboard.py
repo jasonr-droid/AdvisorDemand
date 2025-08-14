@@ -385,7 +385,8 @@ class IndustryDashboard:
                         st.metric("Federal Awards", f"{row['award_count']:,}")
 
                     with col3:
-                        st.metric("SBA Activity", f"{row['sba_count']:,} loans")
+                        sba_count = row.get('sba_count', 0) if 'sba_count' in row else 0
+                        st.metric("SBA Activity", f"{sba_count:,} loans")
                         st.metric("Avg Payroll/Employee", f"${row['avg_pay']:,.0f}")
 
         # Demand signals chart
@@ -645,7 +646,7 @@ class IndustryDashboard:
                 'employment': employment,
                 'rfp_count': rfp_count,
                 'award_count': award_count,
-                'sba_loans': sba_count,
+                'sba_count': sba_count,
                 'avg_pay': avg_pay if employment > 0 else 0,
                 'opportunity_score': min(score, 100)  # Cap at 100
             })
