@@ -26,13 +26,18 @@ class FIPSHelper:
             '06037': {'name': 'Los Angeles County', 'state': 'CA'},
             '06073': {'name': 'San Diego County', 'state': 'CA'},
             '06075': {'name': 'San Francisco County', 'state': 'CA'},
+            '06083': {'name': 'Santa Barbara County', 'state': 'CA'},
+            '06059': {'name': 'Orange County', 'state': 'CA'},
+            '06001': {'name': 'Alameda County', 'state': 'CA'},
             '48201': {'name': 'Harris County', 'state': 'TX'},
             '17031': {'name': 'Cook County', 'state': 'IL'},
             '36061': {'name': 'New York County', 'state': 'NY'},
             '04013': {'name': 'Maricopa County', 'state': 'AZ'},
             '32003': {'name': 'Clark County', 'state': 'NV'},
             '12086': {'name': 'Miami-Dade County', 'state': 'FL'},
-            '53033': {'name': 'King County', 'state': 'WA'}
+            '53033': {'name': 'King County', 'state': 'WA'},
+            '36047': {'name': 'Kings County', 'state': 'NY'},
+            '25025': {'name': 'Suffolk County', 'state': 'MA'}
         }
     
     def validate_fips(self, fips_code: str) -> bool:
