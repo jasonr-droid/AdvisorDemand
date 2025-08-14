@@ -46,7 +46,9 @@ class DatabaseManager:
         with self.get_connection() as conn:
             columns = list(data.keys())
             placeholders = ', '.join(['?' for _ in columns])
-            query = f"INSERT OR REPLACE INTO {table} ({', '.join(columns)}) VALUES ({placeholders})"
+            # Use proper SQL identifier escaping to prevent injection
+            escaped_table = table.replace('"', '""')  # Escape any quotes in table name
+            query = f'INSERT OR REPLACE INTO "{escaped_table}" ({", ".join(columns)}) VALUES ({placeholders})'
             conn.execute(query, list(data.values()))
             conn.commit()
     
@@ -58,7 +60,9 @@ class DatabaseManager:
         with self.get_connection() as conn:
             columns = list(data[0].keys())
             placeholders = ', '.join(['?' for _ in columns])
-            query = f"INSERT OR REPLACE INTO {table} ({', '.join(columns)}) VALUES ({placeholders})"
+            # Use proper SQL identifier escaping to prevent injection
+            escaped_table = table.replace('"', '""')  # Escape any quotes in table name
+            query = f'INSERT OR REPLACE INTO "{escaped_table}" ({", ".join(columns)}) VALUES ({placeholders})'
             
             values_list = [list(row.values()) for row in data]
             conn.executemany(query, values_list)

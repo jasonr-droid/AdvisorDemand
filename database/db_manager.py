@@ -306,7 +306,9 @@ class DatabaseManager:
             placeholders = ', '.join(['?' for _ in columns])
             column_names = ', '.join(columns)
             
-            insert_sql = f"INSERT OR REPLACE INTO {table} ({column_names}) VALUES ({placeholders})"
+            # Use proper SQL identifier escaping to prevent injection
+            escaped_table = table.replace('"', '""')  # Escape any quotes in table name
+            insert_sql = f'INSERT OR REPLACE INTO "{escaped_table}" ({column_names}) VALUES ({placeholders})'
             
             with self.get_connection() as conn:
                 for record in data:
