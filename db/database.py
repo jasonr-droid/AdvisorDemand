@@ -88,25 +88,22 @@ class DatabaseManager:
         """Check data coverage for a county"""
         coverage = {}
         
-        # Check each data source
-        sources = [
-            ('CBP', 'industry_cbp'),
-            ('QCEW', 'industry_qcew'),
-            ('SBA', 'sba_loans'),
-            ('RFPs', 'rfp_opps'),
-            ('Awards', 'awards'),
-            ('Licenses', 'business_licenses'),
-            ('Firms', 'firms'),
-            ('BFS', 'bfs_county')
-        ]
+        # Check each data source with predefined table configurations
+        # This prevents SQL injection by using hardcoded table names and column mappings
+        table_configs = {
+            'CBP': {'table': 'industry_cbp', 'fips_column': 'county_fips'},
+            'QCEW': {'table': 'industry_qcew', 'fips_column': 'county_fips'},
+            'SBA': {'table': 'sba_loans', 'fips_column': 'county_fips'},
+            'RFPs': {'table': 'rfp_opps', 'fips_column': 'place_county_fips'},
+            'Awards': {'table': 'awards', 'fips_column': 'recipient_county_fips'},
+            'Licenses': {'table': 'business_licenses', 'fips_column': 'county_fips'},
+            'Firms': {'table': 'firms', 'fips_column': 'county_fips'},
+            'BFS': {'table': 'bfs_county', 'fips_column': 'county_fips'}
+        }
         
-        for source_name, table_name in sources:
-            if table_name in ['rfp_opps']:
-                query = f"SELECT COUNT(*) as count FROM {table_name} WHERE place_county_fips = ?"
-            elif table_name in ['awards']:
-                query = f"SELECT COUNT(*) as count FROM {table_name} WHERE recipient_county_fips = ?"
-            else:
-                query = f"SELECT COUNT(*) as count FROM {table_name} WHERE county_fips = ?"
+        for source_name, config in table_configs.items():
+            # Use parameterized query with hardcoded table and column names
+            query = f"SELECT COUNT(*) as count FROM {config['table']} WHERE {config['fips_column']} = ?"
             
             try:
                 result = self.execute_query(query, (county_fips,))
