@@ -577,12 +577,16 @@ class IndustryDashboard:
     
     def _render_employment_chart(self, df: pd.DataFrame):
         """Render employment bar chart"""
+        # Use available columns for chart
+        y_column = 'naics_title' if 'naics_title' in df.columns else 'naics'
+        y_label = 'Industry' if y_column == 'naics_title' else 'NAICS Code'
+        
         fig = px.bar(
             df,
             x='employment',
-            y='naics_title',
+            y=y_column,
             title="Employment by Industry",
-            labels={'employment': 'Employment', 'naics_title': 'Industry'},
+            labels={'employment': 'Employment', y_column: y_label},
             orientation='h'
         )
         fig.update_layout(height=500)
@@ -590,12 +594,16 @@ class IndustryDashboard:
     
     def _render_establishments_chart(self, df: pd.DataFrame):
         """Render establishments bar chart"""
+        # Use available columns for chart
+        y_column = 'naics_title' if 'naics_title' in df.columns else 'naics'
+        y_label = 'Industry' if y_column == 'naics_title' else 'NAICS Code'
+        
         fig = px.bar(
             df,
             x='establishments', 
-            y='naics_title',
+            y=y_column,
             title="Establishments by Industry",
-            labels={'establishments': 'Establishments', 'naics_title': 'Industry'},
+            labels={'establishments': 'Establishments', y_column: y_label},
             orientation='h'
         )
         fig.update_layout(height=500)
@@ -610,12 +618,16 @@ class IndustryDashboard:
             st.info("No payroll data available for chart")
             return
         
+        # Use available columns for chart
+        y_column = 'naics_title' if 'naics_title' in df_filtered.columns else 'naics'
+        y_label = 'Industry' if y_column == 'naics_title' else 'NAICS Code'
+        
         fig = px.bar(
             df_filtered,
             x='annual_payroll',
-            y='naics_title', 
+            y=y_column, 
             title="Annual Payroll by Industry",
-            labels={'annual_payroll': 'Annual Payroll ($)', 'naics_title': 'Industry'},
+            labels={'annual_payroll': 'Annual Payroll ($)', y_column: y_label},
             orientation='h'
         )
         fig.update_layout(height=500)

@@ -1,0 +1,32 @@
+ValueError: Value of 'y' is not the name of a column in 'data_frame'. Expected one of ['county_fips', 'naics', 'year', 'establishments', 'employment', 'annual_payroll', 'suppressed', 'source_url', 'retrieved_at', 'license', 'establishments_suppressed', 'employment_suppressed', 'has_suppression', 'quality_score', 'quality_grade'] but received: naics_title
+Traceback:
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 128, in exec_func_with_error_handling
+    result = func()
+             ^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 669, in code_to_exec
+    exec(code, module.__dict__)  # noqa: S102
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/app.py", line 133, in <module>
+    main()
+File "/home/runner/workspace/app.py", line 96, in main
+    render_industry_dashboard(data_service, county_fips)
+File "/home/runner/workspace/components/industry_dashboard.py", line 708, in render_industry_dashboard
+    dashboard.render(county_fips)
+File "/home/runner/workspace/components/industry_dashboard.py", line 60, in render
+    self._render_industries_overview(quality_filtered_data)
+File "/home/runner/workspace/components/industry_dashboard.py", line 174, in _render_industries_overview
+    self._render_employment_chart(df.head(15))
+File "/home/runner/workspace/components/industry_dashboard.py", line 580, in _render_employment_chart
+    fig = px.bar(
+          ^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/plotly/express/_chart_types.py", line 381, in bar
+    return make_figure(
+           ^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/plotly/express/_core.py", line 2491, in make_figure
+    args = build_dataframe(args, constructor)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/plotly/express/_core.py", line 1737, in build_dataframe
+    df_output, wide_id_vars = process_args_into_dataframe(
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/plotly/express/_core.py", line 1338, in process_args_into_dataframe
+    raise ValueError(err_msg)
