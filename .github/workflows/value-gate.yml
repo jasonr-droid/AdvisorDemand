@@ -10,9 +10,30 @@ jobs:
       - name: Check PR body for required sections
         env:
           BODY: ${{ github.event.pull_request.body }}
-        run: |
-          echo "$BODY" | grep -qi "## User Value" || (echo "❌ Missing: User Value" && exit 1)
-          echo "$BODY" | grep -qi "## Hypothesis" || (echo "❌ Missing: Hypothesis" && exit 1)
-          echo "$BODY" | grep -qi "## Metrics Affected" || (echo "❌ Missing: Metrics" && exit 1)
-          echo "$BODY" | grep -qi "## Rollback Plan" || (echo "❌ Missing: Rollback" && exit 1)
-          echo "✅ Value Gate passed"
+          run: |
+            echo "$BODY" | grep -qi "## User Value" || (echo "❌ Missing: User Value" && exit 1)
+            echo "$BODY" | grep -qi "## Hypothesis" || (echo "❌ Missing: Hypothesis" && exit 1)
+            echo "$BODY" | grep -qi "## Metrics Affected" || (echo "❌ Missing: Metrics" && exit 1)
+            echo "$BODY" | grep -qi "## Rollback Plan" || (echo "❌ Missing: Rollback" && exit 1)
+
+            # Fail if template placeholders remain
+            echo "$BODY" | grep -Eq "\{[^}]*\}" && { echo "❌ Remove template placeholders like {this}"; exit 1; }
+
+            # Hypothesis must include 'If we', a % change, and a time window
+            HYP=$(echo "$BODY" | awk '/## Hypothesis/{flag=1;next}/## /{flag=0}flag')
+            echo "$HYP" | grep -qi "if we" || { echo "❌ Hypothesis must start with 'If we ...'"; exit 1; }
+            echo "$HYP" | grep -Eq "[0-9]+%" || { echo "❌ Hypothesis must include a % change"; exit 1; }
+            echo "$HYP" | grep -Eq "[0-9]+( ?(day|week|month)s?)" || { echo "❌ Hypothesis must include a time window"; exit 1; }
+
+            # Metrics must name a valid North Star
+            MET=$(echo "$BODY" | awk '/## Metrics Affected/{flag=1;next}/## /{flag=0}flag')
+            echo "$MET" | grep -Eqi "Qualified Targets Created|Meetings Booked" || { echo "❌ Specify a valid North Star metric"; exit 1; }
+
+            # Rollback must mention feature flag or revert
+            RB=$(echo "$BODY" | awk '/## Rollback Plan/{flag=1;next}/## /{flag=0}flag')
+            echo "$RB" | grep -Eqi "feature flag|revert" || { echo "❌ Rollback must mention feature flag or revert"; exit 1; }
+
+            echo "✅ Stricter Value Gate passed"
+
+
+
