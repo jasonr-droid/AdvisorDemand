@@ -94,7 +94,7 @@ class CBPAdapter:
                 for dataset in data.get('dataset', []):
                     if 'cbp' in dataset.get('c_dataset', []):
                         vintage = dataset.get('c_vintage')
-                        if vintage and vintage.isdigit():
+                        if vintage and str(vintage).isdigit():
                             cbp_years.append(int(vintage))
                 
                 return sorted(cbp_years, reverse=True)

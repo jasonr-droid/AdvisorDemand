@@ -37,7 +37,7 @@ class IndustryDashboard:
         with st.spinner("Loading industry data..."):
             industry_data = self.data_service.get_industry_data(county_fips, naics_level)
         
-        if not industry_data:
+        if industry_data is None or (hasattr(industry_data, 'empty') and industry_data.empty) or (isinstance(industry_data, list) and len(industry_data) == 0):
             st.warning("No industry data available for this county.")
             return
         

@@ -353,3 +353,15 @@ class DatabaseManager:
             freshness['Awards'] = awards_result[0]['latest_retrieval']
         
         return freshness
+    
+    def execute_bulk_insert(self, query: str, data: List[tuple]) -> None:
+        """Execute bulk insert operation"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.executemany(query, data)
+            conn.commit()
+            cursor.close()
+        except Exception as e:
+            self.logger.error(f"Error executing bulk insert: {str(e)}")
+            raise e
