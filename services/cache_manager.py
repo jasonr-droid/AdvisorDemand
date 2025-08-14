@@ -59,7 +59,7 @@ class CacheManager:
         except Exception:
             return False
     
-    def get_cached_data(self, data_type: str, county_fips: str, **kwargs) -> Optional[pd.DataFrame]:
+    def get_cached_data(self, data_type: str, county_fips: str, **kwargs):
         """Retrieve cached data if available and valid"""
         cache_key = self._get_cache_key(data_type, county_fips, **kwargs)
         cache_path = self._get_cache_path(cache_key)
@@ -74,15 +74,18 @@ class CacheManager:
             with open(cache_path, 'rb') as f:
                 data = pickle.load(f)
             
-            print(f"📋 Using cached {data_type} for {county_fips} ({len(data)} rows)")
+            rows_count = len(data) if hasattr(data, '__len__') else 1
+            print(f"📋 Using cached {data_type} for {county_fips} ({rows_count} items)")
             return data
         except Exception as e:
             print(f"Error reading cache: {e}")
             return None
     
-    def cache_data(self, data: pd.DataFrame, data_type: str, county_fips: str, **kwargs) -> None:
+    def cache_data(self, data, data_type: str, county_fips: str, **kwargs) -> None:
         """Store data in cache"""
-        if data is None or data.empty:
+        if data is None:
+            return
+        if hasattr(data, 'empty') and data.empty:
             return
         
         cache_key = self._get_cache_key(data_type, county_fips, **kwargs)
@@ -99,14 +102,15 @@ class CacheManager:
                 'timestamp': datetime.now().isoformat(),
                 'data_type': data_type,
                 'county_fips': county_fips,
-                'rows': len(data),
+                'rows': len(data) if hasattr(data, '__len__') else 1,
                 'kwargs': kwargs
             }
             
             with open(meta_path, 'w') as f:
                 json.dump(metadata, f, indent=2)
             
-            print(f"💾 Cached {data_type} for {county_fips} ({len(data)} rows)")
+            rows_count = len(data) if hasattr(data, '__len__') else 1
+            print(f"💾 Cached {data_type} for {county_fips} ({rows_count} items)")
             
         except Exception as e:
             print(f"Error caching data: {e}")
