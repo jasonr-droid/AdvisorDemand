@@ -63,55 +63,29 @@ def render_rfp_signals(data_service, county_fips: str, data_utils):
             source
         )
     
-    # RFP trends chart
-    if len(rfp_data) > 1:
-        rfp_data['posted_month'] = pd.to_datetime(rfp_data['posted_date'], errors='coerce').dt.to_period('M')
-        monthly_counts = rfp_data.groupby('posted_month').size().reset_index(name='count')
-        monthly_counts['month'] = monthly_counts['posted_month'].astype(str)
+    # Display detailed information about the RFP signals
+    if not rfp_signals.empty:
+        st.subheader("RFP Signal Details")
         
-        fig = px.line(
-            monthly_counts,
-            x='month',
-            y='count',
-            title="RFP Postings Over Time",
-            labels={'count': 'Number of RFPs', 'month': 'Month'}
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # RFP details table
-    st.subheader("RFP Details")
-    
-    display_columns = {
-        'title': 'Title',
-        'naics': 'NAICS',
-        'posted_date': 'Posted Date',
-        'close_date': 'Close Date',
-        'url': 'Link'
-    }
-    
-    # Filter columns that exist
-    available_columns = {k: v for k, v in display_columns.items() if k in rfp_data.columns}
-    
-    if available_columns:
-        display_data = rfp_data[list(available_columns.keys())].copy()
+        description = rfp_signals['description'].iloc[0]
+        source_url = rfp_signals['source_url'].iloc[0]
         
-        # Format dates
-        date_columns = ['posted_date', 'close_date']
-        for col in date_columns:
-            if col in display_data.columns:
-                display_data[col] = pd.to_datetime(display_data[col], errors='coerce').dt.strftime('%Y-%m-%d')
+        st.info(f"📊 **Market Intelligence**: {description}")
         
-        # Format URLs as clickable links
-        if 'url' in display_data.columns:
-            display_data['url'] = display_data['url'].apply(
-                lambda x: f"[View RFP]({x})" if pd.notna(x) else ""
-            )
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Federal Contracting Opportunities**")
+            st.write("• Government agencies seeking financial advisory services")
+            st.write("• Indicates public sector demand for financial consulting")
+            st.write("• Creates opportunities for advisory service providers")
         
-        st.dataframe(
-            display_data.rename(columns=available_columns),
-            use_container_width=True,
-            hide_index=True
-        )
+        with col2:
+            st.markdown("**Data Source Information**")
+            st.write(f"• Source: {rfp_signals['source'].iloc[0]}")
+            st.write(f"• Year: {rfp_signals['year'].iloc[0]}")
+            st.write(f"• Retrieved: {rfp_signals['retrieved_at'].iloc[0][:10]}")
+        
+        st.markdown(f"🔗 **Data Source**: [{source_url}]({source_url})")
 
 def render_awards_signals(data_service, county_fips: str, data_utils):
     """Render federal awards signals"""
@@ -152,51 +126,29 @@ def render_awards_signals(data_service, county_fips: str, data_utils):
             source
         )
     
-    # Awards by agency
-    if 'agency' in awards_data.columns:
-        agency_summary = awards_data.groupby('agency').agg({
-            'amount': ['count', 'sum']
-        }).round(0)
-        agency_summary.columns = ['Count', 'Total Value']
-        agency_summary = agency_summary.sort_values('Total Value', ascending=False).head(10)
+    # Display detailed information about the awards signals
+    if not award_signals.empty:
+        st.subheader("Awards Signal Details")
         
-        st.subheader("Top Awarding Agencies")
-        st.dataframe(agency_summary, use_container_width=True)
-    
-    # Awards timeline
-    if len(awards_data) > 1 and 'action_date' in awards_data.columns:
-        awards_data['award_month'] = pd.to_datetime(awards_data['action_date'], errors='coerce').dt.to_period('M')
-        monthly_awards = awards_data.groupby('award_month').agg({
-            'amount': ['count', 'sum']
-        }).reset_index()
-        monthly_awards.columns = ['month', 'count', 'total_value']
-        monthly_awards['month'] = monthly_awards['month'].astype(str)
+        description = award_signals['description'].iloc[0]
+        source_url = award_signals['source_url'].iloc[0]
         
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=monthly_awards['month'],
-            y=monthly_awards['count'],
-            mode='lines+markers',
-            name='Number of Awards',
-            yaxis='y'
-        ))
-        fig.add_trace(go.Scatter(
-            x=monthly_awards['month'],
-            y=monthly_awards['total_value'],
-            mode='lines+markers',
-            name='Total Value ($)',
-            yaxis='y2'
-        ))
+        st.info(f"📊 **Market Intelligence**: {description}")
         
-        fig.update_layout(
-            title="Federal Awards Over Time",
-            xaxis_title="Month",
-            yaxis=dict(title="Number of Awards", side="left"),
-            yaxis2=dict(title="Total Value ($)", side="right", overlaying="y"),
-            hovermode='x unified'
-        )
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Federal Contract Awards**")
+            st.write("• Government contracts awarded to financial service providers")
+            st.write("• Demonstrates successful government partnerships")  
+            st.write("• Shows market validation of financial advisory services")
         
-        st.plotly_chart(fig, use_container_width=True)
+        with col2:
+            st.markdown("**Data Source Information**")
+            st.write(f"• Source: {award_signals['source'].iloc[0]}")
+            st.write(f"• Year: {award_signals['year'].iloc[0]}")
+            st.write(f"• Retrieved: {award_signals['retrieved_at'].iloc[0][:10]}")
+        
+        st.markdown(f"🔗 **Data Source**: [{source_url}]({source_url})")
 
 def render_license_signals(data_service, county_fips: str, data_utils):
     """Render business license signals"""
