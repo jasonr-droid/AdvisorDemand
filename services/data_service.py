@@ -54,7 +54,8 @@ class DataService:
                 WHERE county_fips = ?
                 ORDER BY year DESC, naics
             """
-            cbp_data = self.db.execute_query(cbp_query, (county_fips,))
+            cbp_results = self.db.execute_query(cbp_query, (county_fips,))
+            cbp_data = pd.DataFrame(cbp_results) if cbp_results else pd.DataFrame()
             
             # Get QCEW data
             qcew_query = """
@@ -64,7 +65,8 @@ class DataService:
                 WHERE county_fips = ?
                 ORDER BY year DESC, quarter DESC, naics
             """
-            qcew_data = self.db.execute_query(qcew_query, (county_fips,))
+            qcew_results = self.db.execute_query(qcew_query, (county_fips,))
+            qcew_data = pd.DataFrame(qcew_results) if qcew_results else pd.DataFrame()
             
             # Merge CBP and QCEW data
             if not cbp_data.empty and not qcew_data.empty:
@@ -105,7 +107,8 @@ class DataService:
                 WHERE county_fips = ?
                 ORDER BY fy DESC, approval_date DESC
             """
-            sba_data = self.db.execute_query(query, (county_fips,))
+            sba_results = self.db.execute_query(query, (county_fips,))
+            sba_data = pd.DataFrame(sba_results) if sba_results else pd.DataFrame()
             
             if sba_data.empty:
                 return pd.DataFrame()
