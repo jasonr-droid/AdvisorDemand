@@ -12,12 +12,19 @@ def render_demand_scoring_dashboard(data_service, county_fips: str):
     st.header("🎯 Demand Scoring Analytics")
     st.markdown("*Sophisticated demand analysis using weighted scoring across multiple market signals*")
     
-    # Initialize scoring service
-    scoring_service = DemandScoringService(data_service)
+    # Refresh option
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        refresh_data = st.button("🔄 Refresh Data", help="Refresh all data sources for updated scoring")
     
     with st.spinner("Computing demand scores..."):
-        # Get industry demand scores
-        industry_scores = scoring_service.industry_scores(county_fips)
+        # Use facade method for efficient data loading
+        dashboard_data = data_service.get_demand_dashboard(county_fips, refresh=refresh_data)
+        
+        industry_scores = dashboard_data["by_industry"]
+        top_companies = dashboard_data["by_company"]
+        size_breakdown = dashboard_data["industry_size"]
+        spend_ranges = dashboard_data["spend_ranges"]
         
         if industry_scores.empty:
             st.warning("⚠️ Insufficient data for demand scoring analysis")
@@ -120,8 +127,6 @@ def render_demand_scoring_dashboard(data_service, county_fips: str):
         # Company targets analysis
         st.subheader("🎯 Target Company Analysis")
         
-        top_companies = scoring_service.top_companies(county_fips, limit=25)
-        
         if not top_companies.empty:
             st.markdown("*Companies with recent licensing activity indicating potential demand*")
             
@@ -148,7 +153,7 @@ def render_demand_scoring_dashboard(data_service, county_fips: str):
         # Spend estimates
         st.subheader("💰 Market Spend Estimates")
         
-        spend_data = scoring_service.spend_estimates(county_fips)
+        spend_data = spend_ranges
         
         if not spend_data.empty:
             # Calculate total market potential

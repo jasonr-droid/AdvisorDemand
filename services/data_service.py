@@ -452,6 +452,20 @@ class DataService:
         
         return totals
     
+    def get_demand_dashboard(self, county_fips: str, refresh: bool = False) -> Dict[str, pd.DataFrame]:
+        """One-stop data for the dashboard tabs."""
+        from services.demand_scoring import DemandScoringService
+        
+        scorer = DemandScoringService(self)
+        if refresh:
+            self.refresh_all_data(county_fips)
+        return {
+            "by_industry": scorer.industry_scores(county_fips),
+            "by_company": scorer.top_companies(county_fips),
+            "industry_size": scorer.size_breakdown(county_fips),
+            "spend_ranges": scorer.spend_estimates(county_fips),
+        }
+    
     def get_rfp_data(self, county_fips: str, refresh: bool = False) -> List[Dict[str, Any]]:
         """Get RFP opportunities data for demand scoring"""
         try:
@@ -534,6 +548,27 @@ class DataService:
         except Exception as e:
             self.logger.error(f"Error getting firm demographics for {county_fips}: {str(e)}")
             return pd.DataFrame()
+    
+    def refresh_all_data(self, county_fips: str):
+        """Refresh all data sources for a county - useful for development/testing"""
+        try:
+            self.logger.info(f"Refreshing all data for county {county_fips}")
+            
+            # Refresh industry data
+            self.get_industry_data(county_fips, refresh=True)
+            
+            # Refresh signals data
+            self.get_rfp_data(county_fips, refresh=True)
+            self.get_license_data(county_fips, refresh=True)
+            self.get_business_formation_data(county_fips, refresh=True)
+            
+            # Refresh financial data
+            self.get_sba_data(county_fips, refresh=True)
+            
+            self.logger.info("Data refresh completed")
+            
+        except Exception as e:
+            self.logger.error(f"Error refreshing data for {county_fips}: {str(e)}")
     
     # Private methods for data fetching
     def _fetch_and_store_cbp_data(self, county_fips: str):

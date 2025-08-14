@@ -50,12 +50,25 @@ class DemandScoringService:
 
         # Licenses per 1k establishments (last 180 days)
         licenses = self.ds.get_license_data(county_fips, refresh=False)
+        
+        # Convert to DataFrame if it's a list
+        if isinstance(licenses, list):
+            licenses = pd.DataFrame(licenses) if licenses else pd.DataFrame()
+        
         if licenses is not None and not licenses.empty:
             licenses["issued_date"] = pd.to_datetime(licenses["issued_date"], errors="coerce")
             cutoff = datetime.now() - timedelta(days=180)
             recent_lic = licenses[licenses["issued_date"] >= cutoff].copy()
+            
+            # Handle missing naics column
+            if "naics" not in recent_lic.columns:
+                recent_lic["naics"] = "00"  # Default NAICS if missing
+                
             recent_lic["naics2"] = recent_lic["naics"].astype(str).str[:2]
-            lic_counts = recent_lic.groupby("naics2", as_index=False)["license_id"].count().rename(columns={"license_id":"license_cnt"})
+            
+            # Handle license_id column
+            id_column = "license_id" if "license_id" in recent_lic.columns else recent_lic.columns[0]
+            lic_counts = recent_lic.groupby("naics2", as_index=False)[id_column].count().rename(columns={id_column:"license_cnt"})
         else:
             lic_counts = pd.DataFrame(columns=["naics2","license_cnt"])
 
@@ -103,13 +116,32 @@ class DemandScoringService:
     def top_companies(self, county_fips: str, limit:int=50) -> pd.DataFrame:
         """Heuristic: new/changed firms & recent licenses ≈ near-term bookkeeping demand."""
         firms = self.ds.get_firm_age_data(county_fips, refresh=False)  # your method returns dict; use firm table directly if available
-        lic  = self.ds.get_license_data(county_fips, refresh=False)
+        lic = self.ds.get_license_data(county_fips, refresh=False)
+        
+        # Convert to DataFrame if it's a list
+        if isinstance(lic, list):
+            lic = pd.DataFrame(lic) if lic else pd.DataFrame()
+        
         if lic is None or lic.empty:
             return pd.DataFrame(columns=["company_name","naics","issued_date","signal"])
+            
         lic["signal"] = "New/renewed license"
-        # If you have a firms table with names, join here. Otherwise, surface license rows.
-        cols = [c for c in ["company_name","naics","issued_date","signal","jurisdiction","status"] if c in lic.columns]
-        return lic.sort_values("issued_date", ascending=False)[cols].head(limit)
+        
+        # Handle missing columns gracefully
+        available_cols = ["company_name", "naics", "issued_date", "signal", "jurisdiction", "status"]
+        cols = [c for c in available_cols if c in lic.columns]
+        
+        # Ensure we have at least basic columns
+        if "issued_date" not in lic.columns and "date" in lic.columns:
+            lic["issued_date"] = lic["date"]
+            cols.append("issued_date")
+        
+        # Sort and return top companies
+        if "issued_date" in lic.columns:
+            lic["issued_date"] = pd.to_datetime(lic["issued_date"], errors="coerce")
+            return lic.sort_values("issued_date", ascending=False)[cols].head(limit)
+        else:
+            return lic[cols].head(limit)
 
     def size_breakdown(self, county_fips: str) -> pd.DataFrame:
         base = self.ds.get_firm_demographics(county_fips, refresh=False)
