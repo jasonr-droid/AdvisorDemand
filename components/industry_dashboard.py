@@ -675,12 +675,13 @@ class IndustryDashboard:
 
     def _render_employment_chart(self, df: pd.DataFrame):
         """Render employment bar chart"""
-        # Add industry names if not already present
+        # Add industry names if not already present or if they're generic
         df_chart = df.copy()
-        if 'naics_title' not in df_chart.columns or df_chart['naics_title'].isna().all():
+        if 'naics_title' not in df_chart.columns or df_chart['naics_title'].isna().all() or \
+           df_chart['naics_title'].str.contains('Sector|Subsector|Industry Group|NAICS Industry', na=False).any():
             from lib.naics import NAICSMapper
             naics_mapper = NAICSMapper()
-            df_chart['naics_title'] = df_chart['naics'].apply(lambda x: naics_mapper.get_short_description(str(x)))
+            df_chart['naics_title'] = df_chart['naics'].apply(lambda x: naics_mapper.get_description(str(x)))
         
         y_column = 'naics_title'
         y_label = 'Industry'
@@ -693,17 +694,18 @@ class IndustryDashboard:
             labels={'employment': 'Employment', y_column: y_label},
             orientation='h'
         )
-        fig.update_layout(height=500)
+        fig.update_layout(height=500, yaxis={'categoryorder': 'total ascending'})
         st.plotly_chart(fig, use_container_width=True)
 
     def _render_establishments_chart(self, df: pd.DataFrame):
         """Render establishments bar chart"""
-        # Add industry names if not already present
+        # Add industry names if not already present or if they're generic
         df_chart = df.copy()
-        if 'naics_title' not in df_chart.columns or df_chart['naics_title'].isna().all():
+        if 'naics_title' not in df_chart.columns or df_chart['naics_title'].isna().all() or \
+           df_chart['naics_title'].str.contains('Sector|Subsector|Industry Group|NAICS Industry', na=False).any():
             from lib.naics import NAICSMapper
             naics_mapper = NAICSMapper()
-            df_chart['naics_title'] = df_chart['naics'].apply(lambda x: naics_mapper.get_short_description(str(x)))
+            df_chart['naics_title'] = df_chart['naics'].apply(lambda x: naics_mapper.get_description(str(x)))
         
         y_column = 'naics_title'
         y_label = 'Industry'
@@ -716,7 +718,7 @@ class IndustryDashboard:
             labels={'establishments': 'Establishments', y_column: y_label},
             orientation='h'
         )
-        fig.update_layout(height=500)
+        fig.update_layout(height=500, yaxis={'categoryorder': 'total ascending'})
         st.plotly_chart(fig, use_container_width=True)
 
     def _render_payroll_chart(self, df: pd.DataFrame):
@@ -728,12 +730,13 @@ class IndustryDashboard:
             st.info("No payroll data available for chart")
             return
 
-        # Add industry names if not already present
+        # Add industry names if not already present or if they're generic
         df_chart = df_filtered.copy()
-        if 'naics_title' not in df_chart.columns or df_chart['naics_title'].isna().all():
+        if 'naics_title' not in df_chart.columns or df_chart['naics_title'].isna().all() or \
+           df_chart['naics_title'].str.contains('Sector|Subsector|Industry Group|NAICS Industry', na=False).any():
             from lib.naics import NAICSMapper
             naics_mapper = NAICSMapper()
-            df_chart['naics_title'] = df_chart['naics'].apply(lambda x: naics_mapper.get_short_description(str(x)))
+            df_chart['naics_title'] = df_chart['naics'].apply(lambda x: naics_mapper.get_description(str(x)))
         
         y_column = 'naics_title'
         y_label = 'Industry'
@@ -746,7 +749,7 @@ class IndustryDashboard:
             labels={'annual_payroll': 'Annual Payroll ($)', y_column: y_label},
             orientation='h'
         )
-        fig.update_layout(height=500)
+        fig.update_layout(height=500, yaxis={'categoryorder': 'total ascending'})
         st.plotly_chart(fig, use_container_width=True)
 
     def _prepare_export_dataframe(self, data: List[Dict[str, Any]], 
