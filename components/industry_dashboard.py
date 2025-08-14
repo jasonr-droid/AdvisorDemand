@@ -533,26 +533,34 @@ class IndustryDashboard:
             'quality_grade': 'Quality'
         }
 
+        # Add meaningful industry names if missing or generic
+        df_enhanced = df.copy()
+        if 'naics_title' not in df_enhanced.columns or df_enhanced['naics_title'].isna().all() or \
+           df_enhanced['naics_title'].str.contains('Sector|Subsector|Industry Group|NAICS Industry', na=False).any():
+            from lib.naics import NAICSMapper
+            naics_mapper = NAICSMapper()
+            df_enhanced['naics_title'] = df_enhanced['naics'].apply(lambda x: naics_mapper.get_description(str(x)))
+
         # Only use columns that actually exist in the DataFrame
-        available_columns = {k: v for k, v in all_display_columns.items() if k in df.columns}
+        available_columns = {k: v for k, v in all_display_columns.items() if k in df_enhanced.columns}
 
         # Create display DataFrame with only available columns
         if available_columns:
-            display_df = df[list(available_columns.keys())].copy()
+            display_df = df_enhanced[list(available_columns.keys())].copy()
             display_df = display_df.rename(columns=available_columns)
         else:
             # Fallback to all columns if none match
-            display_df = df.copy()
+            display_df = df_enhanced.copy()
 
         # Handle suppressed values
         for col in ['Establishments', 'Employment', 'Payroll']:
             suppressed_col = f"{col.lower()}_suppressed"
-            if suppressed_col in df.columns and col in display_df.columns:
-                display_df.loc[df[suppressed_col], col] = "—"
+            if suppressed_col in df_enhanced.columns and col in display_df.columns:
+                display_df.loc[df_enhanced[suppressed_col], col] = "—"
 
         # Format SBA loans column (it's a dict)
-        if 'sba_loans' in df.columns and 'SBA Loans' in display_df.columns:
-            display_df['SBA Loans'] = df['sba_loans'].apply(
+        if 'sba_loans' in df_enhanced.columns and 'SBA Loans' in display_df.columns:
+            display_df['SBA Loans'] = df_enhanced['sba_loans'].apply(
                 lambda x: x.get('count', 0) if isinstance(x, dict) else 0
             )
 
@@ -571,8 +579,8 @@ class IndustryDashboard:
             )
 
         # Add badges for financial services
-        if 'is_financial_services' in df.columns:
-            display_df['Type'] = df['is_financial_services'].apply(
+        if 'is_financial_services' in df_enhanced.columns:
+            display_df['Type'] = df_enhanced['is_financial_services'].apply(
                 lambda x: "🏦 Financial" if x else "🏭 Other"
             )
 
@@ -581,19 +589,29 @@ class IndustryDashboard:
     def _format_financial_services_table(self, df: pd.DataFrame) -> pd.DataFrame:
         """Format financial services data for detailed display"""
         # Add naics_title if missing using NAICS mapper
-        if 'naics_title' not in df.columns:
-            from lib.naics_mapping import naics_mapper
-            df = df.copy()
-            df['naics_title'] = df['naics'].apply(lambda x: naics_mapper.get_naics_title(x))
+        df_copy = df.copy()
+        if 'naics_title' not in df_copy.columns or df_copy['naics_title'].isna().all() or \
+           df_copy['naics_title'].str.contains('Sector|Subsector|Industry Group|NAICS Industry', na=False).any():
+            from lib.naics import NAICSMapper
+            naics_mapper = NAICSMapper()
+            df_copy['naics_title'] = df_copy['naics'].apply(lambda x: naics_mapper.get_description(str(x)))
         
         # Select available columns for display
         available_columns = ['naics', 'naics_title', 'establishments', 'employment', 'annual_payroll']
-        display_columns = [col for col in available_columns if col in df.columns]
-        display_df = df[display_columns].copy()
+        display_columns = [col for col in available_columns if col in df_copy.columns]
+        display_df = df_copy[display_columns].copy()
 
         # Calculate additional metrics
-        display_df['avg_pay'] = display_df['annual_payroll'] / display_df['employment']
-        display_df['employees_per_establishment'] = display_df['employment'] / display_df['establishments']
+        if 'annual_payroll' in display_df.columns and 'employment' in display_df.columns:
+            display_df['avg_pay'] = display_df['annual_payroll'] / display_df['employment']
+        if 'employment' in display_df.columns and 'establishments' in display_df.columns:
+            display_df['employees_per_establishment'] = display_df['employment'] / display_df['establishments']
+
+        # Format payroll as currency
+        if 'annual_payroll' in display_df.columns:
+            display_df['annual_payroll'] = display_df['annual_payroll'].apply(
+                lambda x: f"${x:,.0f}" if pd.notna(x) and isinstance(x, (int, float)) else "N/A"
+            )
 
         return display_df
 
