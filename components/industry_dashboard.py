@@ -305,12 +305,23 @@ class IndustryDashboard:
             fs_df_chart = pd.DataFrame(financial_data)
             fs_df_chart = fs_df_chart.sort_values('employment', ascending=True)
 
+            # Use available column for y-axis (naics_title or naics)
+            y_column = 'naics_title' if 'naics_title' in fs_df_chart.columns else 'naics'
+            y_label = 'Industry' if y_column == 'naics_title' else 'NAICS Code'
+            
+            # Add titles if missing
+            if 'naics_title' not in fs_df_chart.columns and 'naics' in fs_df_chart.columns:
+                from lib.naics_mapping import naics_mapper
+                fs_df_chart['naics_title'] = fs_df_chart['naics'].apply(lambda x: naics_mapper.get_naics_title(x))
+                y_column = 'naics_title'
+                y_label = 'Industry'
+            
             fig = px.bar(
                 fs_df_chart.tail(10), 
                 x='employment',
-                y='naics_title',
+                y=y_column,
                 title="Employment in Financial Services Industries",
-                labels={'employment': 'Employment', 'naics_title': 'Industry'}
+                labels={'employment': 'Employment', y_column: y_label}
             )
             fig.update_layout(height=500)
             st.plotly_chart(fig, use_container_width=True)
