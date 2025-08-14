@@ -4,10 +4,12 @@ import plotly.express as px
 import plotly.graph_objects as go
 from services.demand_scoring import DemandScoringService, DemandWeights
 from lib.utils import DataUtils
+from lib.naics import NAICSMapper
 
 def render_demand_scoring_dashboard(data_service, county_fips: str):
     """Render demand scoring analytics dashboard"""
     data_utils = DataUtils()
+    naics_mapper = NAICSMapper()
     
     st.header("🎯 Demand Scoring Analytics")
     st.markdown("*Sophisticated demand analysis using weighted scoring across multiple market signals*")
@@ -60,14 +62,24 @@ def render_demand_scoring_dashboard(data_service, county_fips: str):
         top_industries = industry_scores.head(10)
         
         if not top_industries.empty:
+            # Add industry descriptions for better chart readability
+            top_industries_display = top_industries.copy()
+            top_industries_display['industry_name'] = top_industries_display['naics'].apply(
+                lambda x: naics_mapper.get_short_description(x)
+            )
+            top_industries_display['display_label'] = (
+                top_industries_display['industry_name'] + 
+                " (" + top_industries_display['naics'].astype(str) + ")"
+            )
+            
             # Create demand score visualization
             fig = px.bar(
-                top_industries,
+                top_industries_display,
                 x='demand_score',
-                y='naics',
+                y='display_label',
                 orientation='h',
-                title="Demand Scores by Industry Sector (2-Digit NAICS)",
-                labels={'demand_score': 'Demand Score (Z-Score)', 'naics': 'NAICS Code'},
+                title="Demand Scores by Industry Sector",
+                labels={'demand_score': 'Demand Score (Z-Score)', 'display_label': 'Industry'},
                 color='demand_score',
                 color_continuous_scale='RdYlGn'
             )
@@ -108,14 +120,18 @@ def render_demand_scoring_dashboard(data_service, county_fips: str):
         # Detailed industry breakdown
         st.subheader("📈 Industry Demand Analysis")
         
-        # Show detailed table
+        # Show detailed table with industry names
         display_df = industry_scores.copy()
+        display_df['industry_name'] = display_df['naics'].apply(
+            lambda x: naics_mapper.get_description(x)
+        )
         display_df['demand_score'] = display_df['demand_score'].round(2)
         display_df['spend_range'] = display_df['spend_low'].astype(str) + ' - $' + display_df['spend_high'].astype(str)
         
         st.dataframe(
-            display_df[['naics', 'establishments', 'demand_score', 'spend_range']].rename(columns={
-                'naics': 'NAICS Code',
+            display_df[['industry_name', 'naics', 'establishments', 'demand_score', 'spend_range']].rename(columns={
+                'industry_name': 'Industry',
+                'naics': 'NAICS',
                 'establishments': 'Establishments',
                 'demand_score': 'Demand Score',
                 'spend_range': 'Estimated Spend Range ($)'

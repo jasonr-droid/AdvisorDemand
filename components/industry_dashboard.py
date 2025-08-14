@@ -311,8 +311,9 @@ class IndustryDashboard:
             
             # Add titles if missing
             if 'naics_title' not in fs_df_chart.columns and 'naics' in fs_df_chart.columns:
-                from lib.naics_mapping import naics_mapper
-                fs_df_chart['naics_title'] = fs_df_chart['naics'].apply(lambda x: naics_mapper.get_naics_title(x))
+                from lib.naics import NAICSMapper
+                naics_mapper = NAICSMapper()
+                fs_df_chart['naics_title'] = fs_df_chart['naics'].apply(lambda x: naics_mapper.get_short_description(str(x)))
                 y_column = 'naics_title'
                 y_label = 'Industry'
             
@@ -655,12 +656,18 @@ class IndustryDashboard:
 
     def _render_employment_chart(self, df: pd.DataFrame):
         """Render employment bar chart"""
-        # Use available columns for chart
-        y_column = 'naics_title' if 'naics_title' in df.columns else 'naics'
-        y_label = 'Industry' if y_column == 'naics_title' else 'NAICS Code'
+        # Add industry names if not already present
+        df_chart = df.copy()
+        if 'naics_title' not in df_chart.columns or df_chart['naics_title'].isna().all():
+            from lib.naics import NAICSMapper
+            naics_mapper = NAICSMapper()
+            df_chart['naics_title'] = df_chart['naics'].apply(lambda x: naics_mapper.get_short_description(str(x)))
+        
+        y_column = 'naics_title'
+        y_label = 'Industry'
 
         fig = px.bar(
-            df,
+            df_chart,
             x='employment',
             y=y_column,
             title="Employment by Industry",
@@ -672,12 +679,18 @@ class IndustryDashboard:
 
     def _render_establishments_chart(self, df: pd.DataFrame):
         """Render establishments bar chart"""
-        # Use available columns for chart
-        y_column = 'naics_title' if 'naics_title' in df.columns else 'naics'
-        y_label = 'Industry' if y_column == 'naics_title' else 'NAICS Code'
+        # Add industry names if not already present
+        df_chart = df.copy()
+        if 'naics_title' not in df_chart.columns or df_chart['naics_title'].isna().all():
+            from lib.naics import NAICSMapper
+            naics_mapper = NAICSMapper()
+            df_chart['naics_title'] = df_chart['naics'].apply(lambda x: naics_mapper.get_short_description(str(x)))
+        
+        y_column = 'naics_title'
+        y_label = 'Industry'
 
         fig = px.bar(
-            df,
+            df_chart,
             x='establishments', 
             y=y_column,
             title="Establishments by Industry",
@@ -696,12 +709,18 @@ class IndustryDashboard:
             st.info("No payroll data available for chart")
             return
 
-        # Use available columns for chart
-        y_column = 'naics_title' if 'naics_title' in df_filtered.columns else 'naics'
-        y_label = 'Industry' if y_column == 'naics_title' else 'NAICS Code'
+        # Add industry names if not already present
+        df_chart = df_filtered.copy()
+        if 'naics_title' not in df_chart.columns or df_chart['naics_title'].isna().all():
+            from lib.naics import NAICSMapper
+            naics_mapper = NAICSMapper()
+            df_chart['naics_title'] = df_chart['naics'].apply(lambda x: naics_mapper.get_short_description(str(x)))
+        
+        y_column = 'naics_title'
+        y_label = 'Industry'
 
         fig = px.bar(
-            df_filtered,
+            df_chart,
             x='annual_payroll',
             y=y_column, 
             title="Annual Payroll by Industry",
