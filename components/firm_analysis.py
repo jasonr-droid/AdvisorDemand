@@ -46,9 +46,9 @@ class FirmAnalysis:
                 'match_rate': firm_age_data.get('match_rate', 0.0)
             },
             'formation_trends': [
-                {'year': 2024, 'new_formations': 45, 'high_propensity': 23},
-                {'year': 2023, 'new_formations': 52, 'high_propensity': 28},
-                {'year': 2022, 'new_formations': 38, 'high_propensity': 19}
+                {'year': 2024, 'applications_total': 45, 'high_propensity_apps': 23},
+                {'year': 2023, 'applications_total': 52, 'high_propensity_apps': 28},
+                {'year': 2022, 'applications_total': 38, 'high_propensity_apps': 19}
             ],
             'business_applications': {
                 'total_apps': 156,
@@ -290,20 +290,39 @@ class FirmAnalysis:
         # Convert to DataFrame
         trends_df = pd.DataFrame(formation_data)
         
+        # Check for required columns and handle different naming conventions
+        total_apps_col = None
+        high_prop_col = None
+        
+        # Check for different possible column names
+        if 'applications_total' in trends_df.columns:
+            total_apps_col = 'applications_total'
+        elif 'new_formations' in trends_df.columns:
+            total_apps_col = 'new_formations'
+        
+        if 'high_propensity_apps' in trends_df.columns:
+            high_prop_col = 'high_propensity_apps'
+        elif 'high_propensity' in trends_df.columns:
+            high_prop_col = 'high_propensity'
+        
+        if not total_apps_col or not high_prop_col:
+            st.warning("Formation trends data is incomplete. Available columns: " + ", ".join(trends_df.columns))
+            return
+        
         # Formation trends chart
         fig = go.Figure()
         
         fig.add_trace(go.Scatter(
             x=trends_df['year'],
-            y=trends_df['new_formations'],
+            y=trends_df[total_apps_col],
             mode='lines+markers',
-            name='Total New Formations',
+            name='Total Applications',
             line=dict(color='#1f77b4', width=3)
         ))
         
         fig.add_trace(go.Scatter(
             x=trends_df['year'],
-            y=trends_df['high_propensity'],
+            y=trends_df[high_prop_col],
             mode='lines+markers',
             name='High Propensity',
             line=dict(color='#ff7f0e', width=3)
@@ -312,7 +331,7 @@ class FirmAnalysis:
         fig.update_layout(
             title="Business Formation Trends Over Time",
             xaxis_title="Year",
-            yaxis_title="Number of New Businesses",
+            yaxis_title="Number of Applications",
             height=400,
             hovermode='x unified'
         )
@@ -323,19 +342,20 @@ class FirmAnalysis:
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            latest_formations = formation_data[0]['new_formations']
-            st.metric("Latest Year Formations", f"{latest_formations:,}")
+            latest_formations = formation_data[0].get(total_apps_col, 0)
+            st.metric("Latest Year Applications", f"{latest_formations:,}")
         
         with col2:
-            latest_hp = formation_data[0]['high_propensity']
+            latest_hp = formation_data[0].get(high_prop_col, 0)
             hp_rate = (latest_hp / latest_formations * 100) if latest_formations > 0 else 0
             st.metric("High Propensity Rate", f"{hp_rate:.1f}%")
         
         with col3:
             # Calculate year-over-year growth
             if len(formation_data) > 1:
-                yoy_growth = ((formation_data[0]['new_formations'] - formation_data[1]['new_formations']) / 
-                            formation_data[1]['new_formations'] * 100) if formation_data[1]['new_formations'] > 0 else 0
+                current_val = formation_data[0].get(total_apps_col, 0)
+                previous_val = formation_data[1].get(total_apps_col, 0)
+                yoy_growth = ((current_val - previous_val) / previous_val * 100) if previous_val > 0 else 0
                 st.metric("YoY Growth", f"{yoy_growth:+.1f}%")
         
         if not formation_data:
