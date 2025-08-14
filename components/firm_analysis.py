@@ -697,5 +697,5 @@ class FirmAnalysis:
 
 def render_firm_analysis(data_service, county_fips: str):
     """Render the firm analysis dashboard for a given county"""
-    dashboard = FirmAnalysisDashboard(data_service)
+    dashboard = FirmAnalysis(data_service, None)  # quality_manager is optional for now
     dashboard.render(county_fips)
