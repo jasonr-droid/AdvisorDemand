@@ -525,7 +525,7 @@ class IndustryDashboard:
             'naics_title': 'Industry',
             'establishments': 'Establishments', 
             'employment': 'Employment',
-            'annual_payroll': 'Payroll',
+            'annual_payroll': 'Annual Payroll',
             'avg_weekly_wage': 'Avg Wage',
             'rfp_count': 'RFPs',
             'award_count': 'Awards',
@@ -552,10 +552,11 @@ class IndustryDashboard:
             # Fallback to all columns if none match
             display_df = df_enhanced.copy()
 
-        # Handle suppressed values
-        for col in ['Establishments', 'Employment', 'Payroll']:
-            suppressed_col = f"{col.lower()}_suppressed"
+        # Handle suppressed values - convert to object type first to allow mixed data types
+        for col in ['Establishments', 'Employment', 'Annual Payroll']:
+            suppressed_col = f"{col.lower().replace(' ', '_')}_suppressed"
             if suppressed_col in df_enhanced.columns and col in display_df.columns:
+                display_df[col] = display_df[col].astype('object')
                 display_df.loc[df_enhanced[suppressed_col], col] = "—"
 
         # Format SBA loans column (it's a dict)
@@ -573,9 +574,9 @@ class IndustryDashboard:
             display_df['Employment'] = display_df['Employment'].apply(
                 lambda x: f"{x:,}" if pd.notna(x) and x != "—" else x
             )
-        if 'Payroll' in display_df.columns:
-            display_df['Payroll'] = display_df['Payroll'].apply(
-                lambda x: f"${x:,.0f}" if pd.notna(x) and x != "—" else x
+        if 'Annual Payroll' in display_df.columns:
+            display_df['Annual Payroll'] = display_df['Annual Payroll'].apply(
+                lambda x: f"${x:,.0f}" if pd.notna(x) and x != "—" and isinstance(x, (int, float)) else x
             )
 
         # Add badges for financial services
