@@ -28,6 +28,12 @@ The application provides both observed data (directly from government sources) a
 - **County Expansion**: Added Santa Barbara County and other major CA counties to searchable list
 - **Cache UI**: Added cache management interface in sidebar for development transparency
 
+### Security and UX Enhancements (August 14, 2025)
+- **SQL Security**: Fixed dynamic SQL construction patterns with hardcoded table configurations to prevent injection vulnerabilities
+- **Demand Signals Fix**: Resolved signal type mapping issues causing empty tabs in demand signals dashboard
+- **Data Source Transparency**: Enhanced license tab with county-specific data availability information and authentic source links
+- **Error Handling**: Improved empty state messaging with actionable guidance for alternative data collection methods
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

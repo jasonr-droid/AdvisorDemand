@@ -168,7 +168,38 @@ def render_license_signals(data_service, county_fips: str, data_utils):
         license_data = data_service.get_license_data(county_fips)
     
     if (isinstance(license_data, list) and len(license_data) == 0) or (hasattr(license_data, 'empty') and license_data.empty):
-        st.info("No business license data available for this county")
+        # Provide information about data availability and alternative sources
+        st.info("📋 Municipal license data access varies by jurisdiction")
+        
+        # County-specific guidance
+        if county_fips == '06083':  # Santa Barbara County
+            st.markdown("""
+            **Santa Barbara County License Data Sources:**
+            - **City of Santa Barbara**: Monthly Excel reports with active business licenses
+            - **Data Fields**: Business name, address, activity type, ownership
+            - **Update Schedule**: Monthly (by 10th business day)
+            - **Access**: [City Business Tax Information](https://santabarbaraca.gov/business/business-taxes-assessments/business-tax-certificate-information)
+            """)
+        else:
+            st.markdown("""
+            **Alternative Data Collection Methods:**
+            - Municipal business license portals
+            - County assessor databases  
+            - Chamber of commerce directories
+            - State business registration records
+            """)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric(
+                f"{data_utils.get_data_badge('Data Source')} Coverage Status", 
+                "Limited"
+            )
+        with col2:
+            st.metric(
+                "Available Sources",
+                "Municipal Portals"
+            )
         return
     
     # Convert list to DataFrame if needed
