@@ -138,6 +138,9 @@ class IndustryDashboard:
         
         # Filter data if requested
         if show_financial_only:
+            # Add financial services classification if not present
+            if 'is_financial_services' not in df.columns:
+                df = self._add_financial_services_classification(df)
             df = df[df['is_financial_services'] == True]
         
         if df.empty:
@@ -706,6 +709,28 @@ class IndustryDashboard:
         - Awards: USAspending.gov federal contract awards
         - SBA: Small Business Administration lending data
         """)
+    
+    def _add_financial_services_classification(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Add financial services classification based on NAICS codes"""
+        # Financial services NAICS codes (52, 523, 5239, etc.)
+        financial_naics_codes = [
+            '52',    # Finance and Insurance
+            '522',   # Credit Intermediation and Related Activities
+            '523',   # Securities, Commodity Contracts, and Other Financial Investments
+            '524',   # Insurance Carriers and Related Activities
+            '525',   # Funds, Trusts, and Other Financial Vehicles
+            '5239'   # Other Financial Investment Activities (includes advisors)
+        ]
+        
+        # Create classification column
+        df['is_financial_services'] = df['naics'].astype(str).apply(
+            lambda x: any(x.startswith(code) for code in financial_naics_codes)
+        )
+        
+        # Mark core financial advisor NAICS specifically
+        df['is_core_advisor'] = df['naics'].astype(str).str.startswith('5239')
+        
+        return df
 
 
 def render_industry_dashboard(data_service: DataService, county_fips: str):
