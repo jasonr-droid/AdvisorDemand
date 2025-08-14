@@ -297,3 +297,59 @@ class DatabaseManager:
         
         current_time = datetime.now().isoformat()
         self.execute_insert(query, (source, county_fips, current_time, status, records_updated, error_message))
+    
+    def get_data_freshness(self) -> Dict[str, str]:
+        """Get data freshness information for all sources"""
+        freshness = {}
+        
+        # CBP data freshness
+        cbp_query = """
+        SELECT MAX(retrieved_at) as latest_retrieval 
+        FROM industry_cbp 
+        WHERE retrieved_at IS NOT NULL
+        """
+        cbp_result = self.execute_query(cbp_query)
+        if cbp_result and cbp_result[0]['latest_retrieval']:
+            freshness['CBP'] = cbp_result[0]['latest_retrieval']
+        
+        # QCEW data freshness
+        qcew_query = """
+        SELECT MAX(retrieved_at) as latest_retrieval 
+        FROM industry_qcew 
+        WHERE retrieved_at IS NOT NULL
+        """
+        qcew_result = self.execute_query(qcew_query)
+        if qcew_result and qcew_result[0]['latest_retrieval']:
+            freshness['QCEW'] = qcew_result[0]['latest_retrieval']
+        
+        # SBA data freshness
+        sba_query = """
+        SELECT MAX(retrieved_at) as latest_retrieval 
+        FROM sba_loans 
+        WHERE retrieved_at IS NOT NULL
+        """
+        sba_result = self.execute_query(sba_query)
+        if sba_result and sba_result[0]['latest_retrieval']:
+            freshness['SBA'] = sba_result[0]['latest_retrieval']
+        
+        # RFP data freshness
+        rfp_query = """
+        SELECT MAX(retrieved_at) as latest_retrieval 
+        FROM rfp_opps 
+        WHERE retrieved_at IS NOT NULL
+        """
+        rfp_result = self.execute_query(rfp_query)
+        if rfp_result and rfp_result[0]['latest_retrieval']:
+            freshness['RFPs'] = rfp_result[0]['latest_retrieval']
+        
+        # Awards data freshness
+        awards_query = """
+        SELECT MAX(retrieved_at) as latest_retrieval 
+        FROM awards 
+        WHERE retrieved_at IS NOT NULL
+        """
+        awards_result = self.execute_query(awards_query)
+        if awards_result and awards_result[0]['latest_retrieval']:
+            freshness['Awards'] = awards_result[0]['latest_retrieval']
+        
+        return freshness

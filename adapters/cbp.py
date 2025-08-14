@@ -4,6 +4,7 @@ import time
 from typing import List, Dict, Any
 from datetime import datetime
 import os
+from urllib.parse import urlencode
 
 class CBPAdapter:
     """Adapter for Census Bureau County Business Patterns data"""
@@ -53,7 +54,7 @@ class CBPAdapter:
                             'employment': int(row[3]) if row[3] not in ['null', 'D', 'S'] else None,
                             'annual_payroll': float(row[4]) * 1000 if row[4] not in ['null', 'D', 'S'] else None,  # Convert to dollars
                             'suppressed': 1 if any(val in ['D', 'S'] for val in row[2:5]) else 0,
-                            'source_url': f"{url}?{requests.compat.urlencode(params)}",
+                            'source_url': f"{url}?{urlencode(params)}",
                             'retrieved_at': datetime.now().isoformat(),
                             'license': 'Public Domain'
                         }

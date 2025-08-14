@@ -693,3 +693,9 @@ class FirmAnalysis:
             - Consider field research for recent market changes
             - Monitor quarterly BFS updates for trend changes
             """)
+
+
+def render_firm_analysis(data_service, county_fips: str):
+    """Render the firm analysis dashboard for a given county"""
+    dashboard = FirmAnalysisDashboard(data_service)
+    dashboard.render(county_fips)

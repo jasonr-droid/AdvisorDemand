@@ -666,3 +666,15 @@ class IndustryDashboard:
         - Awards: USAspending.gov federal contract awards
         - SBA: Small Business Administration lending data
         """)
+
+
+def render_industry_dashboard(data_service: DataService, county_fips: str):
+    """Render the industry dashboard for a given county"""
+    from utils.data_quality import DataQualityManager
+    
+    # Initialize dashboard components
+    quality_manager = DataQualityManager()
+    dashboard = IndustryDashboard(data_service, quality_manager)
+    
+    # Render the dashboard
+    dashboard.render(county_fips)

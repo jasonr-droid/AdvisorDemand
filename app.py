@@ -6,11 +6,11 @@ from datetime import datetime
 import os
 
 # Import custom components and services
-from db.database import DatabaseManager
+from database.db_manager import DatabaseManager
 from components.county_selector import render_county_selector
-from components.industry_table import render_industry_table
+from components.industry_dashboard import render_industry_dashboard
 from components.signals_dashboard import render_signals_dashboard
-from components.firm_age_chart import render_firm_age_chart
+from components.firm_analysis import render_firm_analysis
 from components.methodology import render_methodology
 from services.data_service import DataService
 from services.calculation_service import CalculationService
@@ -93,7 +93,7 @@ def main():
     
     with tab1:
         st.header("Industry Analysis")
-        render_industry_table(data_service, county_fips)
+        render_industry_dashboard(data_service, county_fips)
     
     with tab2:
         st.header("Demand Signals")
@@ -101,7 +101,7 @@ def main():
     
     with tab3:
         st.header("Firm Age & Formation Analysis")
-        render_firm_age_chart(data_service, county_fips)
+        render_firm_analysis(data_service, county_fips)
     
     with tab4:
         st.header("Capital Access Metrics")

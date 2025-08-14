@@ -71,6 +71,15 @@ def render_industry_table(data_service, county_fips: str):
     # Add NAICS descriptions
     display_data['industry'] = display_data['naics'].apply(naics_mapper.get_description)
     
+    # Calculate avg_weekly_wage if not present
+    if 'avg_weekly_wage' not in display_data.columns and 'annual_payroll' in display_data.columns and 'employment' in display_data.columns:
+        # Convert annual payroll to weekly wage (annual_payroll / employment / 52 weeks)
+        display_data['avg_weekly_wage'] = display_data.apply(
+            lambda row: row['annual_payroll'] / row['employment'] / 52 
+            if pd.notna(row['annual_payroll']) and pd.notna(row['employment']) and row['employment'] > 0 
+            else None, axis=1
+        )
+    
     # Format numeric columns
     numeric_columns = ['establishments', 'employment', 'annual_payroll', 'avg_weekly_wage']
     for col in numeric_columns:
@@ -115,8 +124,11 @@ def render_industry_table(data_service, county_fips: str):
         st.metric("Total Payroll", data_utils.format_large_number(total_payroll))
     
     with col4:
-        avg_wage = display_data['avg_weekly_wage'].mean()
-        st.metric("Avg Weekly Wage", f"${avg_wage:,.0f}" if pd.notna(avg_wage) else "—")
+        if 'avg_weekly_wage' in display_data.columns:
+            avg_wage = display_data['avg_weekly_wage'].mean()
+            st.metric("Avg Weekly Wage", f"${avg_wage:,.0f}" if pd.notna(avg_wage) else "—")
+        else:
+            st.metric("Avg Weekly Wage", "—")
     
     # Industry table
     st.subheader("Industry Details")
