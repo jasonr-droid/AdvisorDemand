@@ -380,6 +380,175 @@ class DataService:
         except Exception as e:
             self.logger.error(f"Error fetching formation data: {str(e)}")
     
+    def get_business_formation_data(self, county_fips: str, refresh: bool = False) -> pd.DataFrame:
+        """Get business formation statistics data"""
+        try:
+            if refresh or self._needs_refresh('formations', days=30):
+                self._fetch_and_store_formation_data(county_fips)
+            
+            query = """
+                SELECT county_fips, year, naics, applications, formations,
+                       source_url, retrieved_at, license
+                FROM bfs_county 
+                WHERE county_fips = ?
+                ORDER BY year DESC, naics
+            """
+            bfs_results = self.db.execute_query(query, (county_fips,))
+            return pd.DataFrame(bfs_results) if bfs_results else pd.DataFrame()
+            
+        except Exception as e:
+            self.logger.error(f"Error getting business formation data for {county_fips}: {str(e)}")
+            return pd.DataFrame()
+    
+    def get_demand_signals(self, county_fips: str, refresh: bool = False) -> pd.DataFrame:
+        """Get demand signals data combining RFP, awards, and business formation data"""
+        try:
+            # Get RFP data
+            rfp_data = self.get_rfp_data(county_fips, refresh)
+            
+            # Get awards data  
+            awards_data = self.get_awards_data(county_fips, refresh)
+            
+            # Get business formation data
+            bfs_data = self.get_business_formation_data(county_fips, refresh)
+            
+            # Combine into signals summary
+            signals_summary = []
+            
+            # RFP signals
+            if not rfp_data.empty:
+                total_rfps = len(rfp_data)
+                avg_value = rfp_data['estimated_value'].mean() if 'estimated_value' in rfp_data.columns else 0
+                signals_summary.append({
+                    'signal_type': 'Federal RFP Opportunities',
+                    'count': total_rfps,
+                    'value': avg_value,
+                    'trend': 'stable',
+                    'source': 'SAM.gov'
+                })
+            
+            # Awards signals
+            if not awards_data.empty:
+                total_awards = len(awards_data)
+                total_value = awards_data['amount'].sum() if 'amount' in awards_data.columns else 0
+                signals_summary.append({
+                    'signal_type': 'Federal Awards',
+                    'count': total_awards,
+                    'value': total_value,
+                    'trend': 'stable',
+                    'source': 'USAspending.gov'
+                })
+            
+            # Business formation signals
+            if not bfs_data.empty:
+                formations = len(bfs_data)
+                signals_summary.append({
+                    'signal_type': 'New Business Applications',
+                    'count': formations,
+                    'value': 0,
+                    'trend': 'stable',
+                    'source': 'Census BFS'
+                })
+            
+            return pd.DataFrame(signals_summary)
+            
+        except Exception as e:
+            self.logger.error(f"Error getting demand signals for {county_fips}: {str(e)}")
+            return pd.DataFrame()
+    
+    def get_firm_demographics(self, county_fips: str, refresh: bool = False) -> pd.DataFrame:
+        """Get firm demographics and age distribution data"""
+        try:
+            # Get industry data as base
+            industry_data = self.get_industry_data(county_fips, refresh=refresh)
+            
+            if industry_data.empty:
+                return pd.DataFrame()
+            
+            # Create firm demographics summary
+            firm_demographics = []
+            
+            for _, row in industry_data.iterrows():
+                naics = row['naics']
+                establishments = row.get('establishments', 0)
+                employment = row.get('employment', 0)
+                
+                # Calculate average firm size
+                avg_firm_size = employment / establishments if establishments > 0 else 0
+                
+                # Categorize firm sizes (simple heuristic)
+                if avg_firm_size < 10:
+                    size_category = 'Small (1-9 employees)'
+                elif avg_firm_size < 50:
+                    size_category = 'Medium (10-49 employees)'
+                else:
+                    size_category = 'Large (50+ employees)'
+                
+                firm_demographics.append({
+                    'naics': naics,
+                    'establishments': establishments,
+                    'employment': employment,
+                    'avg_firm_size': avg_firm_size,
+                    'size_category': size_category,
+                    'firm_density': establishments / 1000,  # Per 1000 population approximation
+                })
+            
+            return pd.DataFrame(firm_demographics)
+            
+        except Exception as e:
+            self.logger.error(f"Error getting firm demographics for {county_fips}: {str(e)}")
+            return pd.DataFrame()
+    
+    def get_capital_access_data(self, county_fips: str, refresh: bool = False) -> pd.DataFrame:
+        """Get capital access metrics combining SBA loans and other funding data"""
+        try:
+            # Get SBA loan data
+            sba_data = self.get_sba_data(county_fips, refresh)
+            
+            # Create capital access summary
+            capital_metrics = []
+            
+            if not sba_data.empty:
+                # SBA loan metrics
+                total_loans = sba_data['loan_count'].sum()
+                total_amount = sba_data['total_amount'].sum()
+                avg_loan_size = sba_data['avg_amount'].mean()
+                
+                capital_metrics.append({
+                    'funding_type': 'SBA 7(a) Loans',
+                    'count': total_loans,
+                    'total_amount': total_amount,
+                    'avg_amount': avg_loan_size,
+                    'accessibility': 'High' if total_loans > 10 else 'Medium',
+                    'source': 'SBA'
+                })
+            
+            # Add placeholder for other funding types that could be integrated
+            capital_metrics.extend([
+                {
+                    'funding_type': 'SBA 504 Loans',
+                    'count': 0,
+                    'total_amount': 0,
+                    'avg_amount': 0,
+                    'accessibility': 'Data Not Available',
+                    'source': 'SBA'
+                },
+                {
+                    'funding_type': 'CDFI Lending',
+                    'count': 0,
+                    'total_amount': 0,
+                    'avg_amount': 0,
+                    'accessibility': 'Data Not Available',
+                    'source': 'CDFI Fund'
+                }
+            ])
+            
+            return pd.DataFrame(capital_metrics)
+            
+        except Exception as e:
+            self.logger.error(f"Error getting capital access data for {county_fips}: {str(e)}")
+            return pd.DataFrame()
+
     def _needs_refresh(self, source_name: str, days: int = 1) -> bool:
         """Check if data source needs refresh"""
         try:
