@@ -29,48 +29,38 @@ def render_rfp_signals(data_service, county_fips: str, data_utils):
     st.subheader("Federal RFP Opportunities")
     
     with st.spinner("Loading RFP data..."):
-        rfp_data = data_service.get_rfp_data(county_fips)
+        # Get all signals data and filter for RFP data
+        signals_data = data_service.get_demand_signals(county_fips)
+        rfp_signals = signals_data[signals_data['signal_type'] == 'rfp_count'] if not signals_data.empty else pd.DataFrame()
     
-    if (isinstance(rfp_data, list) and len(rfp_data) == 0) or (hasattr(rfp_data, 'empty') and rfp_data.empty):
+    if rfp_signals.empty:
         st.info("No federal RFP opportunities found for this county in the past year")
         return
     
-    # Convert list to DataFrame if needed
-    if isinstance(rfp_data, list):
-        if len(rfp_data) == 0:
-            st.info("No federal RFP opportunities found for this county in the past year")
-            return
-        rfp_data = pd.DataFrame(rfp_data)
-    
-    # Summary metrics
+    # Summary metrics from cached signals data
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        total_rfps = len(rfp_data)
+        rfp_count = rfp_signals['value'].iloc[0] if not rfp_signals.empty else 0
         st.metric(
             f"{data_utils.get_data_badge('Observed')} Total RFPs",
-            data_utils.format_number(total_rfps)
+            data_utils.format_number(rfp_count)
         )
     
     with col2:
-        # Recent RFPs (last 90 days)
-        recent_cutoff = datetime.now() - timedelta(days=90)
-        recent_rfps = rfp_data[
-            pd.to_datetime(rfp_data['posted_date'], errors='coerce') >= recent_cutoff
-        ]
+        # Show year of data
+        data_year = rfp_signals['year'].iloc[0] if not rfp_signals.empty else 2024
         st.metric(
-            "Recent RFPs (90 days)",
-            data_utils.format_number(len(recent_rfps))
+            "Data Year",
+            data_year
         )
     
     with col3:
-        # Active RFPs (not yet closed)
-        active_rfps = rfp_data[
-            pd.to_datetime(rfp_data['close_date'], errors='coerce') >= datetime.now()
-        ]
+        # Show data source
+        source = rfp_signals['source'].iloc[0] if not rfp_signals.empty else "SAM.gov"
         st.metric(
-            "Active RFPs",
-            data_utils.format_number(len(active_rfps))
+            "Source",
+            source
         )
     
     # RFP trends chart
@@ -128,41 +118,38 @@ def render_awards_signals(data_service, county_fips: str, data_utils):
     st.subheader("Federal Contract Awards")
     
     with st.spinner("Loading awards data..."):
-        awards_data = data_service.get_awards_data(county_fips)
+        # Get all signals data and filter for awards data
+        signals_data = data_service.get_demand_signals(county_fips)
+        award_signals = signals_data[signals_data['signal_type'] == 'award_count'] if not signals_data.empty else pd.DataFrame()
     
-    if (isinstance(awards_data, list) and len(awards_data) == 0) or (hasattr(awards_data, 'empty') and awards_data.empty):
+    if award_signals.empty:
         st.info("No federal contract awards found for this county")
         return
     
-    # Convert list to DataFrame if needed
-    if isinstance(awards_data, list):
-        if len(awards_data) == 0:
-            st.info("No federal contract awards found for this county")
-            return
-        awards_data = pd.DataFrame(awards_data)
-    
-    # Summary metrics
+    # Summary metrics from cached signals data
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        total_awards = len(awards_data)
+        award_count = award_signals['value'].iloc[0] if not award_signals.empty else 0
         st.metric(
             f"{data_utils.get_data_badge('Observed')} Total Awards",
-            data_utils.format_number(total_awards)
+            data_utils.format_number(award_count)
         )
     
     with col2:
-        total_amount = awards_data['amount'].sum()
+        # Show year of data
+        data_year = award_signals['year'].iloc[0] if not award_signals.empty else 2024
         st.metric(
-            "Total Award Value",
-            data_utils.format_large_number(total_amount)
+            "Data Year",
+            data_year
         )
     
     with col3:
-        avg_amount = awards_data['amount'].mean()
+        # Show data source  
+        source = award_signals['source'].iloc[0] if not award_signals.empty else "USAspending.gov"
         st.metric(
-            "Average Award Size",
-            data_utils.format_large_number(avg_amount)
+            "Source",
+            source
         )
     
     # Awards by agency
@@ -285,70 +272,53 @@ def render_license_signals(data_service, county_fips: str, data_utils):
         st.plotly_chart(fig, use_container_width=True)
 
 def render_formation_signals(data_service, county_fips: str, data_utils):
-    """Render business formation signals"""
-    st.subheader("Business Formation Activity")
+    """Render business formation signals - showing SBA loan data as capital demand indicator"""
+    st.subheader("Capital Demand Activity (SBA Loans)")
     
-    with st.spinner("Loading formation data..."):
-        formation_data = data_service.get_formation_data(county_fips)
+    with st.spinner("Loading SBA loan data..."):
+        # Get all signals data and filter for SBA loan data
+        signals_data = data_service.get_demand_signals(county_fips)
+        sba_signals = signals_data[signals_data['signal_type'] == 'sba_loans'] if not signals_data.empty else pd.DataFrame()
     
-    if (isinstance(formation_data, list) and len(formation_data) == 0) or (hasattr(formation_data, 'empty') and formation_data.empty):
-        st.info("No business formation data available for this county")
+    if sba_signals.empty:
+        st.info("No SBA loan data available for this county")
         return
     
-    # Convert list to DataFrame if needed
-    if isinstance(formation_data, list):
-        if len(formation_data) == 0:
-            st.info("No business formation data available for this county")
-            return
-        formation_data = pd.DataFrame(formation_data)
-    
-    # Summary metrics
+    # Summary metrics from cached SBA loan data
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        total_applications = formation_data['applications_total'].sum()
+        sba_loan_count = sba_signals['value'].iloc[0] if not sba_signals.empty else 0
         st.metric(
-            f"{data_utils.get_data_badge('Observed')} Total Applications",
-            data_utils.format_number(total_applications)
+            f"{data_utils.get_data_badge('Observed')} SBA Loans",
+            data_utils.format_number(sba_loan_count)
         )
     
     with col2:
-        high_propensity = formation_data['high_propensity_apps'].sum()
+        # Show year of data
+        data_year = sba_signals['year'].iloc[0] if not sba_signals.empty else 2024
         st.metric(
-            "High Propensity Apps",
-            data_utils.format_number(high_propensity)
+            "Data Year",
+            data_year
         )
     
     with col3:
-        hp_rate = (high_propensity / total_applications * 100) if total_applications > 0 else 0
+        # Show data source  
+        source = sba_signals['source'].iloc[0] if not sba_signals.empty else "SBA"
         st.metric(
-            "High Propensity Rate",
-            f"{hp_rate:.1f}%"
+            "Source",
+            source
         )
     
-    # Formation trends
-    if len(formation_data) > 1:
-        fig = go.Figure()
+    # SBA loan information
+    if not sba_signals.empty:
+        description = sba_signals['description'].iloc[0]
+        st.info(f"💡 **Capital Demand Indicator**: {description}")
         
-        fig.add_trace(go.Bar(
-            x=formation_data['year'],
-            y=formation_data['applications_total'],
-            name='Total Applications',
-            marker_color='lightblue'
-        ))
-        
-        fig.add_trace(go.Bar(
-            x=formation_data['year'],
-            y=formation_data['high_propensity_apps'],
-            name='High Propensity',
-            marker_color='darkblue'
-        ))
-        
-        fig.update_layout(
-            title="Business Formation Trends",
-            xaxis_title="Year",
-            yaxis_title="Number of Applications",
-            barmode='group'
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
+        st.markdown("""
+        **SBA loans indicate businesses requiring capital access**, which creates demand for:
+        - Financial advisory services
+        - Business loan consulting  
+        - Cash flow management advice
+        - Growth planning services
+        """)
