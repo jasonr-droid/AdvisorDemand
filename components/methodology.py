@@ -104,7 +104,7 @@ def render_methodology():
     
     with col1:
         st.markdown(f"""
-        ### {DataUtils.get_data_badge('Observed')} Observed
+        ### {DataUtils.get_data_badge('Observed')}
         Data directly measured or reported by authoritative sources:
         - CBP establishment and employment counts
         - QCEW employment and wage data
@@ -116,7 +116,7 @@ def render_methodology():
     
     with col2:
         st.markdown(f"""
-        ### {DataUtils.get_data_badge('Proxy')} Proxy
+        ### {DataUtils.get_data_badge('Proxy')}
         Indicators that suggest market demand but require interpretation:
         - Service categories extracted from RFP text
         - Industry classifications from license data
@@ -125,7 +125,7 @@ def render_methodology():
     
     with col3:
         st.markdown(f"""
-        ### {DataUtils.get_data_badge('Estimated')} Estimated
+        ### {DataUtils.get_data_badge('Estimated')}
         Calculated metrics derived from observed data:
         - Revenue estimates (when available)
         - Market size projections
