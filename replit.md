@@ -34,6 +34,13 @@ The application provides both observed data (directly from government sources) a
 - **Data Source Transparency**: Enhanced license tab with county-specific data availability information and authentic source links
 - **Error Handling**: Improved empty state messaging with actionable guidance for alternative data collection methods
 
+### Advanced Analytics Integration (August 14, 2025)
+- **Demand Scoring Service**: Implemented sophisticated multi-signal demand scoring using weighted z-score normalization
+- **Industry Prioritization**: Added NAICS-level demand analysis combining BFS applications, license activity, and RFP opportunities
+- **Market Sizing**: Integrated spend estimation algorithms based on establishment size proxies and industry benchmarks
+- **Target Company Identification**: Created heuristic-based company targeting using recent licensing and formation activity
+- **Enhanced SQL Analytics**: Incorporated user-requested establishment counting queries with proper year filtering and aggregation
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

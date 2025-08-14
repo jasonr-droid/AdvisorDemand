@@ -452,6 +452,89 @@ class DataService:
         
         return totals
     
+    def get_rfp_data(self, county_fips: str, refresh: bool = False) -> List[Dict[str, Any]]:
+        """Get RFP opportunities data for demand scoring"""
+        try:
+            if refresh or self._needs_refresh('rfps', days=7):
+                self._fetch_and_store_rfp_data(county_fips)
+            
+            query = """
+                SELECT notice_id, posted_date, naics, description, 
+                       source_url, retrieved_at, license
+                FROM rfp_opps 
+                WHERE place_county_fips = ?
+                ORDER BY posted_date DESC
+            """
+            rfp_data = self.db.execute_query(query, (county_fips,))
+            
+            # Convert to list of dicts for scoring service
+            if isinstance(rfp_data, list):
+                return rfp_data
+            elif hasattr(rfp_data, 'to_dict'):
+                return rfp_data.to_dict('records')
+            else:
+                return []
+            
+        except Exception as e:
+            self.logger.error(f"Error getting RFP data for {county_fips}: {str(e)}")
+            return []
+    
+    def get_business_formation_data(self, county_fips: str, refresh: bool = False) -> pd.DataFrame:
+        """Get business formation data for demand scoring"""
+        try:
+            if refresh or self._needs_refresh('bfs', days=30):
+                self._fetch_and_store_formation_data(county_fips)
+            
+            query = """
+                SELECT county_fips, year, applications_total as applications, 
+                       high_propensity_apps, source_url, retrieved_at, license
+                FROM bfs_county 
+                WHERE county_fips = ?
+                ORDER BY year DESC
+            """
+            formation_data = self.db.execute_query(query, (county_fips,))
+            
+            if isinstance(formation_data, list):
+                return pd.DataFrame(formation_data)
+            else:
+                return formation_data
+            
+        except Exception as e:
+            self.logger.error(f"Error getting formation data for {county_fips}: {str(e)}")
+            return pd.DataFrame()
+    
+    def get_firm_demographics(self, county_fips: str, refresh: bool = False) -> pd.DataFrame:
+        """Get firm demographics for size breakdown analysis"""
+        try:
+            # Use existing firm age data as proxy for demographics
+            firm_age_data = self.get_firm_age_data(county_fips, refresh)
+            
+            # Convert age distribution to size categories
+            size_breakdown = {
+                'small': firm_age_data.get('age_0_1', 0) + firm_age_data.get('age_1_3', 0),
+                'medium': firm_age_data.get('age_3_5', 0),
+                'large': firm_age_data.get('age_5_plus', 0),
+                'total_firms': firm_age_data.get('total_firms', 0)
+            }
+            
+            return pd.DataFrame([{
+                'category': 'Small (0-3 years)',
+                'count': size_breakdown['small'],
+                'percentage': (size_breakdown['small'] / max(size_breakdown['total_firms'], 1)) * 100
+            }, {
+                'category': 'Medium (3-5 years)',
+                'count': size_breakdown['medium'],
+                'percentage': (size_breakdown['medium'] / max(size_breakdown['total_firms'], 1)) * 100
+            }, {
+                'category': 'Large (5+ years)',
+                'count': size_breakdown['large'],
+                'percentage': (size_breakdown['large'] / max(size_breakdown['total_firms'], 1)) * 100
+            }])
+            
+        except Exception as e:
+            self.logger.error(f"Error getting firm demographics for {county_fips}: {str(e)}")
+            return pd.DataFrame()
+    
     # Private methods for data fetching
     def _fetch_and_store_cbp_data(self, county_fips: str):
         """Fetch and store CBP data"""

@@ -12,6 +12,7 @@ from components.industry_dashboard import render_industry_dashboard
 from components.signals_dashboard import render_signals_dashboard
 from components.firm_analysis import render_firm_analysis
 from components.methodology import render_methodology
+from components.demand_scoring_dashboard import render_demand_scoring_dashboard
 from components.cache_manager_ui import render_cache_manager
 from services.data_service import DataService
 from services.calculation_service import CalculationService
@@ -95,7 +96,13 @@ def main():
     st.info(f"**Coverage for {county_name}:** {' | '.join(coverage_badges)}")
     
     # Main tabs
-    tab1, tab2, tab3, tab4 = st.tabs(["📈 Industries", "🎯 Demand Signals", "🏢 Firm Analysis", "💰 Capital Access"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "📈 Industries", 
+        "🎯 Demand Signals", 
+        "🏢 Firm Analysis", 
+        "💰 Capital Access",
+        "⭐ Demand Scoring"
+    ])
     
     with tab1:
         st.header("Industry Analysis")
@@ -134,6 +141,9 @@ def main():
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.warning("No SBA lending data available for this county")
+    
+    with tab5:
+        render_demand_scoring_dashboard(data_service, county_fips)
 
 if __name__ == "__main__":
     main()
