@@ -12,6 +12,7 @@ class DatabaseManager:
     
     def __init__(self, db_path: str = "financial_advisor_data.db"):
         self.db_path = db_path
+        self.logger = logger
         self.init_database()
     
     def init_database(self):

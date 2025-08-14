@@ -31,9 +31,16 @@ def render_rfp_signals(data_service, county_fips: str, data_utils):
     with st.spinner("Loading RFP data..."):
         rfp_data = data_service.get_rfp_data(county_fips)
     
-    if rfp_data.empty:
+    if (isinstance(rfp_data, list) and len(rfp_data) == 0) or (hasattr(rfp_data, 'empty') and rfp_data.empty):
         st.info("No federal RFP opportunities found for this county in the past year")
         return
+    
+    # Convert list to DataFrame if needed
+    if isinstance(rfp_data, list):
+        if len(rfp_data) == 0:
+            st.info("No federal RFP opportunities found for this county in the past year")
+            return
+        rfp_data = pd.DataFrame(rfp_data)
     
     # Summary metrics
     col1, col2, col3 = st.columns(3)
@@ -123,9 +130,16 @@ def render_awards_signals(data_service, county_fips: str, data_utils):
     with st.spinner("Loading awards data..."):
         awards_data = data_service.get_awards_data(county_fips)
     
-    if awards_data.empty:
+    if (isinstance(awards_data, list) and len(awards_data) == 0) or (hasattr(awards_data, 'empty') and awards_data.empty):
         st.info("No federal contract awards found for this county")
         return
+    
+    # Convert list to DataFrame if needed
+    if isinstance(awards_data, list):
+        if len(awards_data) == 0:
+            st.info("No federal contract awards found for this county")
+            return
+        awards_data = pd.DataFrame(awards_data)
     
     # Summary metrics
     col1, col2, col3 = st.columns(3)
