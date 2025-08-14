@@ -449,16 +449,37 @@ class DataService:
             return pd.DataFrame()
     
     def get_demand_signals(self, county_fips: str, refresh: bool = False) -> pd.DataFrame:
-        """Get demand signals data combining RFP, awards, and business formation data"""
+        """Get demand signals data combining RFP, awards, and business formation data with caching"""
+        try:
+            # Try to get cached data first
+            if not refresh:
+                cached_data = self.cache_manager.get_cached_data('signals_data', county_fips)
+                if cached_data is not None:
+                    return cached_data
+            
+            # If no cache or refresh requested, fetch fresh data
+            fresh_signals = self._fetch_fresh_demand_signals(county_fips)
+            
+            # Cache the fresh data
+            self.cache_manager.cache_data(fresh_signals, 'signals_data', county_fips)
+            
+            return fresh_signals
+            
+        except Exception as e:
+            self.logger.error(f"Error getting demand signals: {e}")
+            return pd.DataFrame()
+    
+    def _fetch_fresh_demand_signals(self, county_fips: str) -> pd.DataFrame:
+        """Fetch fresh demand signals from various sources"""
         try:
             # Get RFP data
-            rfp_data = self.get_rfp_data(county_fips, refresh)
+            rfp_data = self.get_rfp_data_old(county_fips, refresh=True)
             
             # Get awards data  
-            awards_data = self.get_awards_data(county_fips, refresh)
+            awards_data = self.get_awards_data_old(county_fips, refresh=True)
             
             # Get business formation data
-            bfs_data = self.get_business_formation_data(county_fips, refresh)
+            bfs_data = self.get_formation_data(county_fips, refresh=True)
             
             # Combine into signals summary
             signals_summary = []
