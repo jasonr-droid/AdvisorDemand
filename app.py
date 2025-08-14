@@ -12,6 +12,7 @@ from components.industry_dashboard import render_industry_dashboard
 from components.signals_dashboard import render_signals_dashboard
 from components.firm_analysis import render_firm_analysis
 from components.methodology import render_methodology
+from components.cache_manager_ui import render_cache_manager
 from services.data_service import DataService
 from services.calculation_service import CalculationService
 
@@ -57,6 +58,11 @@ def main():
                 st.write(f"{color} {source}: {date}")
             else:
                 st.write(f"🔴 {source}: No data")
+        
+        st.divider()
+        
+        # Cache management for troubleshooting
+        render_cache_manager()
         
         st.divider()
         

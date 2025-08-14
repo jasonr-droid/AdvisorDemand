@@ -14,6 +14,7 @@ from adapters.opencorporates import OpenCorporatesAdapter
 from adapters.bfs import BFSAdapter
 from lib.naics import NAICSMapper
 from lib.utils import DataUtils
+from services.cache_manager import CacheManager
 
 class DataService:
     """Main data service for fetching and processing government data"""
@@ -22,6 +23,7 @@ class DataService:
         self.db = db_manager
         self.naics_mapper = NAICSMapper()
         self.data_utils = DataUtils()
+        self.cache_manager = CacheManager()
         
         # Initialize adapters
         self.cbp_adapter = CBPAdapter()
@@ -37,7 +39,53 @@ class DataService:
         self.logger = logging.getLogger(__name__)
     
     def get_industry_data(self, county_fips: str, naics_level: int = 2, refresh: bool = False) -> pd.DataFrame:
-        """Get combined industry data from CBP and QCEW"""
+        """Get combined industry data from CBP and QCEW with caching"""
+        try:
+            # Try to get cached data first
+            if not refresh:
+                cached_data = self.cache_manager.get_cached_data('cbp_data', county_fips, naics_level=naics_level)
+                if cached_data is not None:
+                    return cached_data
+            
+            # If no cache or refresh requested, fetch fresh data
+            fresh_data = self._fetch_fresh_industry_data(county_fips, naics_level)
+            
+            # Cache the fresh data
+            self.cache_manager.cache_data(fresh_data, 'cbp_data', county_fips, naics_level=naics_level)
+            
+            return fresh_data
+            
+        except Exception as e:
+            self.logger.error(f"Error getting industry data: {e}")
+            # Return empty DataFrame with correct structure
+            return pd.DataFrame(columns=['county_fips', 'naics', 'year', 'establishments', 'employment', 'annual_payroll'])
+    
+    def _fetch_fresh_industry_data(self, county_fips: str, naics_level: int = 2) -> pd.DataFrame:
+        """Fetch fresh industry data from APIs"""
+        try:
+            # Get CBP data from Census API
+            cbp_data = self.cbp_adapter.fetch_county_data(county_fips, year=2022)
+            
+            if not cbp_data:
+                return pd.DataFrame(columns=['county_fips', 'naics', 'year', 'establishments', 'employment', 'annual_payroll'])
+            
+            # Convert to DataFrame
+            df = pd.DataFrame(cbp_data)
+            
+            # Add quality metrics
+            df['suppressed'] = False
+            df['source_url'] = 'https://api.census.gov/data/2022/cbp'
+            df['retrieved_at'] = datetime.now().isoformat()
+            df['license'] = 'Public Domain'
+            
+            return df
+            
+        except Exception as e:
+            print(f"Error fetching fresh industry data: {e}")
+            return pd.DataFrame(columns=['county_fips', 'naics', 'year', 'establishments', 'employment', 'annual_payroll'])
+    
+    def get_industry_data_old(self, county_fips: str, naics_level: int = 2, refresh: bool = False) -> pd.DataFrame:
+        """Original method - kept for reference"""
         try:
             # Check if we need to refresh data
             if refresh or self._needs_refresh('cbp', days=30):

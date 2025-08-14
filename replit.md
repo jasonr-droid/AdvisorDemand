@@ -19,6 +19,14 @@ The application provides both observed data (directly from government sources) a
 - **Table Formatting**: Fixed column mapping issues to display available data fields properly
 - **Chart Compatibility**: Updated all Plotly charts to use available columns (NAICS codes) instead of missing industry titles
 - **Quality Filtering**: Implemented small cell suppression and privacy compliance features
+- **Financial Services Filter**: Fixed "Show only financial services" checkbox crash by adding dynamic NAICS classification
+
+### Data Persistence Implementation (August 14, 2025)
+- **Cache Manager**: Implemented comprehensive caching system to retain API data during troubleshooting
+- **Smart Caching**: 24-48 hour retention periods based on data source update frequency (CBP: 24h, SBA: 48h, etc.)
+- **Development Mode**: Cache prevents repeated API calls while fixing display issues
+- **County Expansion**: Added Santa Barbara County and other major CA counties to searchable list
+- **Cache UI**: Added cache management interface in sidebar for development transparency
 
 ## User Preferences
 
