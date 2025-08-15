@@ -33,6 +33,7 @@ The application provides both observed data (directly from government sources) a
 - **Demand Signals Fix**: Resolved signal type mapping issues causing empty tabs in demand signals dashboard
 - **Data Source Transparency**: Enhanced license tab with county-specific data availability information and authentic source links
 - **Error Handling**: Improved empty state messaging with actionable guidance for alternative data collection methods
+- **Business License Data**: Confirmed Santa Barbara County lacks public API access for business license data; dashboard correctly displays "Limited" coverage status with manual data collection guidance
 
 ### Advanced Analytics Integration (August 14, 2025)
 - **Demand Scoring Service**: Implemented sophisticated multi-signal demand scoring using weighted z-score normalization
@@ -42,6 +43,13 @@ The application provides both observed data (directly from government sources) a
 - **Enhanced SQL Analytics**: Incorporated user-requested establishment counting queries with proper year filtering and aggregation
 - **Dashboard Facade Pattern**: Added get_demand_dashboard() method for efficient data loading across scoring components
 - **Performance Optimization**: Implemented one-stop data payload system with refresh_all_data() capability for development use
+
+### UI/UX Improvements (August 14, 2025)
+- **Dark Mode Implementation**: Successfully implemented dark theme with professional color scheme for improved visibility
+- **Industry Name Enhancement**: Replaced all numeric NAICS codes with descriptive industry names across tables and charts
+- **Currency Formatting**: Added proper dollar formatting for Annual Payroll columns ($10,891,000 format)
+- **Chart Consistency**: Updated all employment, establishment, and payroll charts to use descriptive industry names
+- **Financial Services Mapping**: Enhanced NAICS mapper with comprehensive financial services industry codes (Commercial Banking, Insurance Agencies, etc.)
 
 ## User Preferences
 
