@@ -29,6 +29,13 @@ class LicensesAdapter:
                 'county_fips': '06075',
                 'date_field': 'license_creation_date',
                 'status_field': 'license_status'
+            },
+            'Santa Barbara': {
+                'url': 'https://data.ca.gov/api/3/action/datastore_search?resource_id=business-licenses-santa-barbara',
+                'county_fips': '06083',
+                'date_field': 'license_start_date',
+                'status_field': 'license_status',
+                'type': 'ca_open_data'
             }
         }
         

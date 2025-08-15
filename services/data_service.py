@@ -325,6 +325,14 @@ class DataService:
             """
             license_data = self.db.execute_query(query, (county_fips,))
             
+            # Handle both list and DataFrame returns
+            if isinstance(license_data, list):
+                if len(license_data) == 0:
+                    # Check if this is Santa Barbara County and return empty DataFrame
+                    # to trigger the "Limited" data coverage message
+                    return pd.DataFrame()
+                license_data = pd.DataFrame(license_data)
+            
             return license_data
             
         except Exception as e:
