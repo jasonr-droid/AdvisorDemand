@@ -24,6 +24,10 @@ class NAICSMapper:
         
         # NAICS hierarchy - comprehensive mapping for all major sectors
         self.naics_hierarchy = {
+            # Special codes
+            '00': 'Total for all sectors',
+            '0': 'Total for all sectors',
+            
             # 2-digit sectors
             '11': 'Agriculture, Forestry, Fishing and Hunting',
             '21': 'Mining, Quarrying, and Oil and Gas Extraction',
